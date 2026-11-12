@@ -1,0 +1,219 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Psychodiagnostics in management · AI + management · 9 slides</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#080722;color:#eef0ff;font-family:"Segoe UI",Inter,"PingFang SC","Microsoft YaHei",Arial,sans-serif;font-weight:300;overflow:hidden}
+.bgx{position:fixed;left:0;top:0;right:0;bottom:0;z-index:0;background:radial-gradient(1200px 700px at 20% 20%,rgba(124,58,237,.22),rgba(8,7,34,0) 60%),radial-gradient(900px 600px at 85% 85%,rgba(240,171,252,.10),rgba(8,7,34,0) 60%),linear-gradient(180deg,#0a0828,#080722 60%,#0b0930)}
+.frame{position:fixed;left:10px;top:10px;right:10px;bottom:10px;border:1px solid rgba(167,139,250,.38);border-radius:18px;pointer-events:none;z-index:40;box-shadow:0 0 24px rgba(139,92,246,.22),inset 0 0 30px rgba(139,92,246,.10)}
+.deck{position:fixed;left:0;top:0;right:0;bottom:0;z-index:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth}
+.deck::-webkit-scrollbar{display:none}
+.slide{flex:none;width:100vw;height:100vh;scroll-snap-align:start;position:relative;overflow:hidden;padding:52px 96px 40px;display:grid;grid-template-rows:auto 1fr auto;grid-gap:22px}
+.k{font-size:13px;letter-spacing:.42em;text-transform:uppercase;color:#d9ccff}
+.body{min-height:0;display:grid;grid-template-rows:auto 1fr;grid-gap:26px}
+.slide:first-child .body{grid-template-rows:1fr auto}
+#ai .tile{justify-content:flex-start}
+.body>:only-child{grid-row:1/-1}
+.foot{display:flex;justify-content:space-between;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#b3b0de}
+h1{font-size:5vw;font-weight:200;letter-spacing:.03em;line-height:1.06;color:#fff;text-shadow:0 0 30px rgba(196,170,255,.3)}
+h1 b{font-weight:500;color:#c4b5fd}
+.sub{font-size:1.5vw;color:#b3b0de;max-width:46ch;line-height:1.45;margin-top:20px}
+.txt{position:relative;z-index:2}
+.txt.low{position:absolute;left:0;bottom:0;max-width:60%}
+.txt.mid{text-align:center}
+canvas.ball{position:absolute;left:0;top:0;width:100%;height:100%;z-index:0}
+.hero,.center{position:relative;min-height:0;display:grid;align-items:center}
+.hero{grid-template-columns:1fr 1fr;grid-template-rows:1fr}
+.hero canvas.ball{left:40%;width:60%}
+.fan{position:relative;align-self:stretch;min-height:0;z-index:1}
+.fan i{position:absolute;left:50%;bottom:8%;width:18%;height:62%;margin-left:-9%;border-radius:14px;transform-origin:50% 120%;box-shadow:0 20px 50px rgba(0,0,20,.6),inset 0 0 0 1px rgba(255,255,255,.12)}
+.stats{display:flex}
+.stats span{font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#b3b0de;margin-right:56px}
+.stats b{display:block;font-size:2.6vw;font-weight:200;color:#fff;letter-spacing:.02em;margin-bottom:6px}
+.uses{display:flex;flex-wrap:wrap;justify-content:center;align-content:center}
+.uses span{display:inline-block;margin:10px;padding:22px 38px;border-radius:999px;border:1px solid rgba(196,170,255,.5);background:rgba(20,16,60,.55);font-size:1.9vw;color:#fff}
+.uses span i{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:16px;vertical-align:middle;box-shadow:0 0 12px currentColor}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);grid-gap:24px;min-height:0}
+.tile{position:relative;border-radius:22px;border:1px solid rgba(167,139,250,.28);background:rgba(16,14,52,.62);padding:34px 36px 30px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+.tile i{position:absolute;right:26px;top:10px;font-style:normal;font-size:9vw;font-weight:200;color:rgba(196,170,255,.10);line-height:1}
+.tile b{font-size:2.6vw;font-weight:300;color:#fff;margin-bottom:12px}
+.tile em{font-style:normal;font-size:1.35vw;color:#eef0ff;line-height:1.35;margin-bottom:12px}
+.tile span{font-size:1.05vw;color:#b3b0de;line-height:1.4}
+.tile .arrow{color:#c4b5fd;font-size:1.1vw;margin-top:10px}
+.tile ul{list-style:none;font-size:1.3vw;line-height:1.75;color:#eef0ff}
+.tile ul li:before{content:"✦";margin-right:12px;color:#f0abfc;font-size:.8em}
+.tile.hot{box-shadow:inset 0 0 0 1px rgba(167,139,250,.25),0 0 40px rgba(124,58,237,.18)}
+.chart{position:relative;min-height:0;display:grid;grid-template-rows:1fr auto;grid-gap:14px}
+.bars{display:flex;align-items:flex-end;min-height:0;padding:0 10px;border-bottom:1px solid rgba(167,139,250,.28)}
+.bar{flex:1;height:100%;position:relative;margin:0 6px}
+.bar i{position:absolute;left:0;right:0;bottom:0;border-radius:8px 8px 0 0;background:rgba(167,139,250,.35);border:1px solid rgba(196,170,255,.45);transition:height 1s cubic-bezier(.2,.7,.2,1)}
+.bar.hot i{background:rgba(240,171,252,.55);border-color:#f0abfc;box-shadow:0 0 24px rgba(240,171,252,.45)}
+.bar b{position:absolute;left:0;right:0;top:100%;margin-top:10px;text-align:center;font-weight:400;font-size:1vw;color:#d9ccff}
+.bar em{position:absolute;left:0;right:0;text-align:center;font-style:normal;font-size:.95vw;color:#fff;margin-bottom:6px}
+.bar.hot em{color:#f0abfc}
+.bar small{position:absolute;left:-40%;right:-40%;top:100%;margin-top:30px;text-align:center;font-size:.8vw;letter-spacing:.08em;text-transform:uppercase;color:#f0abfc;white-space:nowrap}
+.cap{font-size:1vw;letter-spacing:.2em;text-transform:uppercase;color:#b3b0de;padding-top:44px}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);grid-gap:18px;align-content:center;min-height:0}
+.step{position:relative;padding-top:20px}
+.step i{display:block;width:4.2vw;height:4.2vw;border-radius:50%;border:1px solid rgba(196,170,255,.6);background:rgba(20,16,60,.7);box-shadow:0 0 24px rgba(167,139,250,.35);font-style:normal;font-size:1.8vw;font-weight:200;color:#fff;text-align:center;line-height:4.2vw;margin-bottom:22px}
+.step:after{content:"";position:absolute;left:4.6vw;right:-18px;top:calc(20px + 2.1vw);border-top:1px dashed rgba(196,170,255,.4)}
+.step:last-child:after{display:none}
+.step b{display:block;font-weight:300;font-size:1.5vw;color:#fff;line-height:1.3}
+.rule{font-size:1.5vw;color:#c4b5fd;letter-spacing:.04em;border-top:1px solid rgba(167,139,250,.28);padding-top:18px}
+.cards{display:grid;grid-template-columns:repeat(8,1fr);grid-gap:18px;min-height:0;align-items:stretch}
+.card{display:flex;flex-direction:column;min-height:0}
+.card i{flex:1;min-height:0;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,20,.6),inset 0 0 0 1px rgba(255,255,255,.12)}
+.card b{font-weight:300;font-size:1.3vw;color:#fff;margin-top:14px}
+.card span{font-size:.85vw;letter-spacing:.14em;text-transform:uppercase;color:#b3b0de}
+.pairs{display:grid;grid-template-rows:repeat(4,1fr);grid-gap:14px;min-height:0;align-content:center}
+.pair{display:grid;grid-template-columns:1.1fr 3fr;grid-gap:24px;align-items:center}
+.pair b{font-weight:300;font-size:1.45vw;color:#fff}
+.row{display:grid;grid-template-rows:1fr 1fr;grid-gap:6px}
+.row div{position:relative;height:1.8vw;border-radius:8px;background:rgba(20,16,60,.7)}
+.row div i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+.row div.a i{background:rgba(167,139,250,.75);box-shadow:0 0 16px rgba(167,139,250,.5)}
+.row div.b i{background:rgba(248,113,113,.75);box-shadow:0 0 16px rgba(248,113,113,.5)}
+.row div em{position:absolute;right:12px;top:0;line-height:1.8vw;font-style:normal;font-size:1vw;color:#fff}
+.row div small{position:absolute;left:12px;top:0;line-height:1.8vw;font-size:.85vw;letter-spacing:.14em;text-transform:uppercase;color:#fff;opacity:.85}
+.acts{display:flex;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;margin:0 12px 10px 0;padding:12px 24px;border-radius:999px;color:#fff;border:1px solid rgba(196,170,255,.5);background:rgba(20,16,60,.55);font-size:1.1vw;letter-spacing:.06em}
+.tag{font-size:.85vw;letter-spacing:.2em;text-transform:uppercase;color:#fcd34d;margin-left:auto}
+.src{font-size:.9vw;letter-spacing:.1em;color:#b3b0de;margin-top:22px}
+.dots{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:50;display:flex}
+.dots a{width:8px;height:8px;border-radius:50%;background:rgba(196,170,255,.3);display:block;cursor:pointer;margin:0 6px;transition:all .24s}
+.dots a.on{background:#c4b5fd;box-shadow:0 0 10px #c4b5fd;transform:scale(1.3)}
+#notes{position:fixed;left:50%;bottom:48px;transform:translateX(-50%);width:900px;max-width:80vw;z-index:60;display:none;padding:18px 24px;border-radius:16px;background:rgba(8,7,34,.94);border:1px solid rgba(196,170,255,.5);font-size:17px;line-height:1.5;box-shadow:0 14px 40px rgba(0,0,20,.6)}
+#notes.on{display:block}
+.slide .txt,.slide .stats,.slide .tiles,.slide .uses,.slide .chart,.slide .steps,.slide .cards,.slide .pairs,.slide .acts,.slide .rule{opacity:0;transform:translateY(16px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.slide.in .txt,.slide.in .stats,.slide.in .tiles,.slide.in .uses,.slide.in .chart,.slide.in .steps,.slide.in .cards,.slide.in .pairs,.slide.in .acts,.slide.in .rule{opacity:1;transform:none}
+.slide.in .stats,.slide.in .tiles,.slide.in .uses,.slide.in .chart,.slide.in .steps,.slide.in .cards,.slide.in .pairs{transition-delay:.25s}
+@media (max-width:1100px){h1{font-size:54px}.sub{font-size:17px}}
+@media print{html,body{overflow:visible}.deck{position:static;display:block;overflow:visible}.slide{page-break-after:always;width:100%;height:100vh}.frame,.dots,#notes{display:none}.slide *{opacity:1!important;transform:none!important}}
+</style></head><body>
+<div class="bgx"></div><div class="frame"></div>
+<main class="deck"><section class="slide"><div class="k">Psychodiagnostics · AI + management</div><div class="body"><div class="hero"><canvas class="ball" id="b1"></canvas>
+  <div class="txt"><h1>Right person.<br><b>Right task.</b><br>Measured.</h1><p class="sub">Tests show what the interview can't. AI makes it fast. The manager decides.</p></div>
+  <div class="fan" id="fan"></div></div>
+  <div class="stats"><span><b>3</b>cases</span><span><b>2</b>methods</span><span><b>16</b>traits</span><span><b>8</b>colours</span><span><b>1</b>rule: never the only criterion</span></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>01 / 09</span></div></section><section class="slide"><div class="k">What it is</div><div class="body"><div class="txt mid"><h1>One question:<br><b>is this person right</b><br>for this task, team, role?</h1></div><div class="uses" id="uses"></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>02 / 09</span></div></section><section class="slide"><div class="k">Three cases</div><div class="body"><div class="txt"><h1>Three cases. <b>Three decisions.</b></h1></div><div class="tiles" id="cases"></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>03 / 09</span></div></section><section class="slide"><div class="k">Method 1 · 16PF</div><div class="body"><div class="txt"><h1>16PF: <b>16 traits</b> in 45 minutes.</h1><p class="sub">185 items (16PF5, 1993; online 16PF6, 2018) · stens 1–10 · read the pattern, not one scale.</p></div>
+  <div class="chart"><div class="bars" id="bars"></div><div class="cap">Sample profile, case 1: low stability, high apprehension and tension</div></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>04 / 09</span></div></section><section class="slide"><div class="k">16PF · procedure</div><div class="body"><div class="txt"><h1>Six steps. <b>One rule.</b></h1></div><div class="steps" id="steps"></div>
+  <p class="rule">One input among several, never the only one. A 1-sten gap is within measurement error.</p></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>05 / 09</span></div></section><section class="slide"><div class="k">Method 2 · Lüscher</div><div class="body"><div class="txt"><h1>Lüscher: <b>8 colours, 5 minutes.</b> State, not trait.</h1></div>
+  <div class="cards" id="cards"></div>
+  <p class="rule">Since 1947. Two passes, five minutes apart. Alarming result → supportive talk, never sanctions.</p></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>06 / 09</span></div></section><section class="slide"><div class="k">Mini-case · synthetic data</div><div class="body"><div class="txt"><h1>Shenzhen vs Moscow: <b>same traits, different state.</b></h1></div>
+  <div class="pairs" id="pairs"></div>
+  <div class="acts"><span class="pill">Buddy programme</span><span class="pill">Chinese-speaking tutor</span><span class="pill">Exam-period consultations</span><span class="pill">Monthly re-screening</span><span class="tag">synthetic data · illustration only</span></div><p class="rule">Real anchor: 56,000+ Chinese students in Russia in 2024/25. Published research: lower well-being than peers studying in China (Danilenko and Syui, 2018).</p></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>07 / 09</span></div></section><section class="slide"><div class="k">AI + management</div><div class="body"><div class="txt"><h1>AI measures. <b>The manager decides.</b></h1></div><div class="tiles" id="ai"></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>08 / 09</span></div></section><section class="slide"><div class="k">Limits · ethics · summary</div><div class="body"><div class="center"><canvas class="ball" id="b9"></canvas>
+  <div class="txt low"><h1>Probabilities, <b>not verdicts.</b></h1>
+  <p class="acts"><span class="pill">Consent</span><span class="pill">Confidentiality</span><span class="pill">Qualified interpretation</span><span class="pill">Never the only criterion</span><span class="pill">Colour test = screening only</span></p>
+  <p class="src">Cattell 1993 · Lüscher 1969 · Belbin 1981 · Thomas & Kilmann 1974 · Maslach & Jackson 1981 · Danilenko & Syui 2018</p></div></div></div><div class="foot"><span>Psychodiagnostics in management · AI + management</span><span>09 / 09</span></div></section></main>
+<nav class="dots"></nav>
+<div id="notes"></div>
+<script>/* Ball — the etalon «simplistic ball» (operator 09.11: «каждый шар/звезда/агент — эталонный симплистик шар с рефа»;
+   ref = right image of Desktop/4_FINAL/JARVIS_MAP.jpg): a geodesic sphere, glowing nodes, a triangular mesh of neon lines,
+   colours in regions. Pure canvas 2D, no deps. Reusable: Ball.model(opt) once, Ball.render(ctx, model, cx, cy, R, t, o) per frame.
+   opt: {pal:[{c:'#hex', n:weight}], sub:1|2|3, seed, jitter, hubs}   o: {focus:'#hex' (other regions × fade), lit:Set of lit colours (others × litFade), alpha, yaw, tilt, spin, glow, gr (glow radius ×R), br (backdrop ×R), back:false, dimBack, node, edge}            */
+(function (root) {
+  const PHI = (1 + Math.sqrt(5)) / 2;
+  const nrm = p => { const l = Math.hypot(p[0], p[1], p[2]); return [p[0] / l, p[1] / l, p[2] / l]; };
+  const rng = s => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  function ico(sub) {
+    const v = [[-1, PHI, 0], [1, PHI, 0], [-1, -PHI, 0], [1, -PHI, 0], [0, -1, PHI], [0, 1, PHI], [0, -1, -PHI], [0, 1, -PHI],
+      [PHI, 0, -1], [PHI, 0, 1], [-PHI, 0, -1], [-PHI, 0, 1]].map(nrm);
+    let f = [[0, 11, 5], [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [1, 5, 9], [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
+      [3, 9, 4], [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [4, 9, 5], [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1]];
+    for (let s = 0; s < sub; s++) {
+      const cache = {}, nf = [];
+      const mid = (a, b) => { const k = a < b ? a + '_' + b : b + '_' + a; if (cache[k] != null) return cache[k];
+        v.push(nrm([(v[a][0] + v[b][0]) / 2, (v[a][1] + v[b][1]) / 2, (v[a][2] + v[b][2]) / 2])); return cache[k] = v.length - 1; };
+      for (const [a, b, c] of f) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); nf.push([a, ab, ca], [b, bc, ab], [c, ca, bc], [ab, bc, ca]); }
+      f = nf;
+    }
+    const seen = new Set(), e = [];
+    for (const [a, b, c] of f) for (const [x, y] of [[a, b], [b, c], [c, a]]) { const k = x < y ? x * 65536 + y : y * 65536 + x; if (!seen.has(k)) { seen.add(k); e.push([x, y]); } }
+    return { v, e };
+  }
+  const SPR = {};
+  function sprite(c) {   /* glow dot: white core, colour halo */
+    if (SPR[c]) return SPR[c];
+    const s = document.createElement('canvas'); s.width = s.height = 64; const g = s.getContext('2d'), r = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    r.addColorStop(0, '#ffffff'); r.addColorStop(.16, '#ffffff'); r.addColorStop(.3, c); r.addColorStop(.55, c + '55'); r.addColorStop(1, c + '00');
+    g.fillStyle = r; g.fillRect(0, 0, 64, 64); return SPR[c] = s;
+  }
+  function model(opt) {
+    const { v, e } = ico(opt.sub ?? 2), R = rng(opt.seed ?? 7), J = opt.jitter ?? .045;
+    const V = v.map(p => nrm([p[0] + (R() - .5) * J, p[1] + (R() - .5) * J, p[2] + (R() - .5) * J]));
+    const pal = (opt.pal && opt.pal.length ? opt.pal : [{ c: '#a78bfa', n: 1 }]).filter(p => p.n > 0);
+    const tot = pal.reduce((s, p) => s + p.n, 0), m = pal.length;
+    const seeds = pal.map((p, i) => { const k = i + .5, ph = Math.acos(1 - 2 * k / m), th = Math.PI * (1 + Math.sqrt(5)) * k + (opt.seed ?? 7); return [Math.cos(th) * Math.sin(ph), Math.cos(ph), Math.sin(th) * Math.sin(ph)]; });
+    const cap = pal.map(p => Math.max(1, Math.round(p.n / tot * V.length))), own = new Int16Array(V.length).fill(-1), pairs = [];
+    V.forEach((p, i) => seeds.forEach((s, j) => pairs.push([p[0] * s[0] + p[1] * s[1] + p[2] * s[2], i, j])));
+    pairs.sort((a, b) => b[0] - a[0]);
+    for (const [, i, j] of pairs) if (own[i] < 0 && cap[j] > 0) { own[i] = j; cap[j]--; }
+    for (let i = 0; i < V.length; i++) if (own[i] < 0) own[i] = 0;
+    const col = Array.from(own, j => pal[j].c);
+    const hubs = new Set(); seeds.forEach((s, j) => { let b = -1, bd = -2; V.forEach((p, i) => { const d = p[0] * s[0] + p[1] * s[1] + p[2] * s[2]; if (own[i] === j && d > bd) { bd = d; b = i; } }); if (b >= 0) hubs.add(b); });
+    for (let k = 0; k < (opt.hubs ?? 3); k++) hubs.add(Math.floor(R() * V.length));
+    return { V, E: e, col, hubs, pal, n: V.length, PX: new Float32Array(V.length), PY: new Float32Array(V.length), PD: new Float32Array(V.length) };
+  }
+  function render(ctx, M, cx, cy, R, t, o = {}) {
+    const a0 = o.alpha ?? 1, yaw = (o.yaw ?? 0) + t * (o.spin ?? .00018), tilt = o.tilt ?? -.32, cy_ = Math.cos(yaw), sy = Math.sin(yaw), ct = Math.cos(tilt), st = Math.sin(tilt);
+    const { V, E, col, hubs, PX, PY, PD } = M;
+    if (o.back !== false) { const g = ctx.createRadialGradient(cx, cy, R * .2, cx, cy, R * (o.br ?? 1.25)); g.addColorStop(0, 'rgba(3,4,18,' + (.55 * a0) + ')'); g.addColorStop(.8, 'rgba(3,4,18,' + (.35 * a0) + ')'); g.addColorStop(1, 'rgba(3,4,18,0)');
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * (o.br ?? 1.25), 0, 6.283); ctx.fill(); }
+    for (let i = 0; i < V.length; i++) { const [x0, y0, z0] = V[i], x = x0 * cy_ + z0 * sy, z = -x0 * sy + z0 * cy_, y = y0 * ct - z * st, zz = y0 * st + z * ct, f = 1 + zz * .06;
+      PX[i] = cx + x * R * f; PY[i] = cy - y * R * f; PD[i] = (zz + 1) / 2; }
+    ctx.globalCompositeOperation = 'lighter'; const lw = Math.max(.5, R / 120), back = o.dimBack ?? .16;
+    const fo = o.focus, lit = o.lit, fw = i => (!fo || col[i] === fo ? 1 : (o.fade ?? .22)) * (!lit || lit.has(col[i]) ? 1 : (o.litFade ?? .1));
+    for (const [a, b] of E) { const d = (PD[a] + PD[b]) / 2, al = (back + (1 - back) * d * d) * a0 * (o.edge ?? .9) * Math.max(fw(a), fw(b));
+      if (al < .02) continue; ctx.globalAlpha = al; ctx.lineWidth = lw * (.55 + .75 * d);
+      if (col[a] === col[b]) ctx.strokeStyle = col[a]; else { const g = ctx.createLinearGradient(PX[a], PY[a], PX[b], PY[b]); g.addColorStop(0, col[a]); g.addColorStop(1, col[b]); ctx.strokeStyle = g; }
+      ctx.beginPath(); ctx.moveTo(PX[a], PY[a]); ctx.lineTo(PX[b], PY[b]); ctx.stroke(); }
+    const ns = R * (o.node ?? .085);
+    for (let i = 0; i < V.length; i++) { const d = PD[i], h = hubs.has(i), tw = h ? .8 + .2 * Math.sin(t / 500 + i) : 1, s = ns * (h ? 2.1 : 1) * (.45 + .75 * d) * tw;
+      ctx.globalAlpha = (back * .8 + (1 - back) * d) * a0 * fw(i); ctx.drawImage(sprite(col[i]), PX[i] - s, PY[i] - s, 2 * s, 2 * s); }
+    if (o.glow) { const g = ctx.createRadialGradient(cx, cy, R * .9, cx, cy, R * (o.gr ?? 1.5)); g.addColorStop(0, o.glow + '30'); g.addColorStop(1, o.glow + '00');
+      ctx.globalAlpha = a0; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * (o.gr ?? 1.5), 0, 6.283); ctx.fill(); }
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+  /* convenience: own canvas, DPR-aware, renders only while visible */
+  function mount(canvas, opt, o = {}) {
+    const M = model(opt), ctx = canvas.getContext('2d'); let W = 0, H = 0, vis = true, raf = 0;
+    const size = () => { const r = devicePixelRatio || 1, b = canvas.getBoundingClientRect(); W = b.width; H = b.height; canvas.width = W * r; canvas.height = H * r; ctx.setTransform(r, 0, 0, r, 0, 0); };
+    const loop = t => { if (vis) { ctx.clearRect(0, 0, W, H); render(ctx, M, W / 2, H / 2, Math.min(W, H) * (o.fill ?? .4), t, o); } raf = requestAnimationFrame(loop); };
+    new ResizeObserver(size).observe(canvas); size();
+    if ('IntersectionObserver' in root) new IntersectionObserver(es => { vis = es[0].isIntersecting; }).observe(canvas);
+    raf = requestAnimationFrame(loop); return { M, o, stop: () => cancelAnimationFrame(raf) };
+  }
+  root.Ball = { model, render, mount, sprite };
+})(window);
+</script>
+<script>
+var NOTES=["大家好! Здравствуйте! Hello everyone. Every manager asks one question: is this person right for this task, this team, this role? Psychodiagnostics answers with measurement, not with feelings. Today: three real management cases, two methods you can use next month, and one idea: AI makes the measuring fast, but the manager still makes the decision.", "What is psychodiagnostics? Standardised tests, questionnaires and projective techniques. They measure traits, motivation, emotional state and potential. For a manager it has five uses: select people, build teams, promote, develop, and prevent problems before they explode.", "Case one: hiring a sales manager. Great interview, but the test shows high anxiety and low frustration tolerance. The test does not reject him; it tells the final interview where to look. Case two: a project team of eight. Three idea generators, nobody who finishes, and one conflict pair. One swap, and the pair works in different streams. Case three: promotion and overload. The candidate is an expert, not a leader, so he gets an expert track. Burnout scores rise, so the workload is changed before people resign.", "Method one: the 16PF questionnaire by Cattell. Fifth edition, 1993; a sixth online edition since 2018. One hundred eighty-five items, about forty-five minutes, sixteen traits on a scale from one to ten. Look at the profile: most scores are average. Three are not: stability is low, apprehension and tension are high. That is the pattern from case one. We read the pattern, never one number.", "The procedure has six steps. One: define the job profile. Two: informed consent and standard instructions. Three: the test, no time pressure. Four: scoring against occupational norms, and first check the honesty scales. Five: a trained psychologist reads the pattern. Six: a conclusion linked to the role, and feedback to the person. And one rule: the test is one input among several. A one-sten difference is within measurement error, so never over-read small gaps.", "Method two: the Lüscher colour test. Eight cards. Choose the colour you like most right now, then the next, until all eight are ranked. Positions one and two: what the person wants. Three and four: the actual state. Five and six: suppressed. Seven and eight: rejected. It measures today's state, not the personality. Two passes, five minutes apart: if they differ a lot, the tension is situational. An alarming result means a supportive talk, never a sanction.", "A mini-case close to this room. Two groups of Chinese students: forty in Shenzhen at home, forty in Moscow. The data is synthetic, for illustration. Traits are almost the same. The state is not: in Moscow, tension and apprehension are higher, and the colour test shows two to three times more signs of depletion. This is adaptation load: language, climate, distance from family. Our numbers are synthetic, but they follow the direction of published studies: Chinese students in Russia report lower well-being than those studying at home. The management answer: a buddy programme, a Chinese-speaking tutor, consultations in the exam period, and a monthly re-screening.", "Where does AI come in? AI does the boring part: scoring in seconds, validity checks, instructions in Russian and Chinese, dashboards with trends, reminders for re-screening. The manager keeps the human part: consent, interpretation together with a psychologist, the decision, the feedback. And three things never change: a test is never the only criterion, never a reason for sanctions, and never without consent.", "To finish. Tests predict probabilities, not outcomes. The Lüscher test has a weak evidence base, test-retest about 0.35, so use it for screening only. State is not trait. Norms must be local. Four rules: consent, confidentiality, qualified interpretation, and never the only criterion. Measure fast with AI, decide slowly as a manager. Thank you. 谢谢. Спасибо. Questions are welcome."], LUSCHER=[["blue", "#2a4d9b"], ["green", "#2e7d5b"], ["red", "#e0442b"], ["yellow", "#f2c53d"], ["violet", "#7d4fa0"], ["brown", "#8b5a3c"], ["grey", "#9a9a9a"], ["black", "#111118"]], PF16=[["A", 7], ["B", 6], ["C", 3], ["E", 6], ["F", 7], ["G", 5], ["H", 8], ["I", 5], ["L", 6], ["M", 4], ["N", 6], ["O", 8], ["Q1", 5], ["Q2", 4], ["Q3", 5], ["Q4", 8]], HOT={"C": "stability ↓", "O": "apprehension ↑", "Q4": "tension ↑"}, CASES=[["01", "Hiring", "Strong interview, high anxiety", "16PF + motivation checklist", "final interview targets the weak spots"], ["02", "Team of 8", "3 idea generators · 0 finishers · 1 conflict pair", "Belbin · sociometry · Thomas–Kilmann", "one swap, pair split across streams"], ["03", "Promotion", "Expert, not a leader · exhaustion rising", "leadership test · assessment centre · Maslach quarterly", "expert track; workload fixed before resignations"]], STEPS=["Job profile", "Consent, standard instructions", "Test, no time pressure", "Score vs norms, check validity first", "Psychologist reads the pattern", "Decide + feedback"], PAIRS=[["Tension (Q4)", 5.2, 6.9, 10], ["Apprehension (O)", 5.4, 6.8, 10], ["Emotional stability (C)", 6.1, 5.0, 10], ["Basic colours rejected, Lüscher 7–8", 13, 33, 50]], AI=[["AI does", "#7dd3fc", ["scoring in seconds", "validity checks", "RU / ZH instructions", "trend dashboards", "re-screening reminders"]], ["The manager does", "#a78bfa", ["asks for consent", "interprets with a psychologist", "decides", "gives feedback"]], ["Never", "#f87171", ["a test as the only criterion", "sanctions from a test", "data without consent"]]];
+var $=function(s){return document.querySelector(s)}, $$=function(s){return Array.prototype.slice.call(document.querySelectorAll(s))};
+var S=$$('.slide'), deck=$('.deck'), dots=$('.dots'), notes=$('#notes'), cur=0;
+S.forEach(function(s,i){var a=document.createElement('a');a.onclick=function(){go(i)};dots.appendChild(a)});
+function go(i){cur=Math.max(0,Math.min(S.length-1,i));S[cur].scrollIntoView({behavior:'smooth',inline:'start',block:'nearest'})}
+var IO=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting)return;cur=S.indexOf(e.target);e.target.classList.add('in');
+  $$('.dots a').forEach(function(a,i){a.classList.toggle('on',i===cur)});notes.textContent=(cur+1)+' · '+NOTES[cur]})},{root:deck,threshold:.6});
+S.forEach(function(s){IO.observe(s)});
+addEventListener('keydown',function(e){var k=e.key;
+  if(k==='ArrowRight'||k==='PageDown'||k===' '){e.preventDefault();go(cur+1)}
+  else if(k==='ArrowLeft'||k==='PageUp'){e.preventDefault();go(cur-1)}
+  else if(k==='Home')go(0);else if(k==='End')go(S.length-1);
+  else if(/^[1-9]$/.test(k))go(+k-1);else if(k.toLowerCase()==='n')notes.classList.toggle('on')});
+/* visuals */
+Ball.mount($('#b1'),{pal:[{c:'#a78bfa',n:6},{c:'#f87171',n:4},{c:'#7dd3fc',n:4},{c:'#f0abfc',n:3}],sub:2,seed:11,jitter:.05,hubs:4},{fill:.5,alpha:.8,spin:.00012,edge:.7,node:.07,dimBack:.14,tilt:-.3});
+Ball.mount($('#b9'),{pal:[{c:'#a78bfa',n:8},{c:'#f87171',n:6},{c:'#7dd3fc',n:6}],sub:2,seed:21,jitter:.05,hubs:3},{fill:.5,alpha:.9,spin:.00015,edge:.8,node:.08,dimBack:.16});
+var fan=$('#fan');LUSCHER.forEach(function(c,i){var d=document.createElement('i');d.style.background=c[1];d.style.transform='rotate('+((i-3.5)*9)+'deg)';d.style.zIndex=i;fan.appendChild(d)});
+var uses=$('#uses');[['Select','#a78bfa'],['Build teams','#4ade80'],['Promote','#fcd34d'],['Develop','#7dd3fc'],['Prevent problems','#f87171']].forEach(function(u){var s=document.createElement('span');s.innerHTML='<i style="background:'+u[1]+';color:'+u[1]+'"></i>'+u[0];uses.appendChild(s)});
+var cs=$('#cases');CASES.forEach(function(c){var d=document.createElement('div');d.className='tile';d.innerHTML='<i>'+c[0]+'</i><b>'+c[1]+'</b><em>'+c[2]+'</em><span>'+c[3]+'</span><span class="arrow">→ '+c[4]+'</span>';cs.appendChild(d)});
+var bars=$('#bars');PF16.forEach(function(p){var hot=HOT[p[0]];var d=document.createElement('div');d.className='bar'+(hot?' hot':'');
+  d.innerHTML='<i style="height:0"></i><em style="bottom:'+(p[1]*10)+'%">'+p[1]+'</em><b>'+p[0]+'</b>'+(hot?'<small>'+hot+'</small>':'');bars.appendChild(d);
+  setTimeout(function(){d.querySelector('i').style.height=(p[1]*10)+'%'},300)});
+var st=$('#steps');STEPS.forEach(function(s,i){var d=document.createElement('div');d.className='step';d.innerHTML='<i>'+(i+1)+'</i><b>'+s+'</b>';st.appendChild(d)});
+var cards=$('#cards'),GRP=['desired','desired','actual','actual','suppressed','suppressed','rejected','rejected'];
+LUSCHER.forEach(function(c,i){var d=document.createElement('div');d.className='card';d.innerHTML='<i style="background:'+c[1]+'"></i><b>'+(i+1)+' · '+c[0]+'</b><span>'+GRP[i]+'</span>';cards.appendChild(d)});
+var pr=$('#pairs');PAIRS.forEach(function(p){var d=document.createElement('div');d.className='pair';
+  d.innerHTML='<b>'+p[0]+'</b><div class="row"><div class="a"><i style="width:0"></i><small>Shenzhen</small><em>'+p[1]+(p[3]===50?' %':'')+'</em></div><div class="b"><i style="width:0"></i><small>Moscow</small><em>'+p[2]+(p[3]===50?' %':'')+'</em></div></div>';
+  pr.appendChild(d);setTimeout(function(){var q=d.querySelectorAll('i');q[0].style.width=(p[1]/p[3]*100)+'%';q[1].style.width=(p[2]/p[3]*100)+'%'},300)});
+var ai=$('#ai');AI.forEach(function(t,i){var d=document.createElement('div');d.className='tile'+(i===1?' hot':'');d.style.borderColor=t[1];
+  d.innerHTML='<b style="color:'+t[1]+'">'+t[0]+'</b><ul>'+t[2].map(function(x){return '<li>'+x+'</li>'}).join('')+'</ul>';ai.appendChild(d)});
+S[0].classList.add('in');
+</script></body></html>
