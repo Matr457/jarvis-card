@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NANO Brain 3D</title>
+<meta name="description" content="NANO — a second brain in 3D: six AI agents orbit the NANO core, each holding its top notes of a real 2 384-note knowledge graph.">
+<meta name="theme-color" content="#06041a">
+<meta property="og:type" content="website">
+<meta property="og:title" content="NANO — second brain in 3D">
+<meta property="og:description" content="Six AI agents orbit the NANO core. Real knowledge graph: 2 384 notes, 17 481 links. Orbit it like Blender.">
+<meta property="og:image" content="https://matr457.github.io/jarvis-card/brain/assets/og.jpg">
+<meta property="og:url" content="https://matr457.github.io/jarvis-card/brain/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>/* Мозг NANO 3D — космос (индиго + лавандовая туманность) × вьюпорт Blender (заголовок, гизмо, боковая панель N, ползунки-поля) */
+:root{
+  --bg:#05031a; --ink:#ece8ff; --dim:#a69fce; --mute:#6f689a;
+  --panel:rgba(15,11,42,.72); --panel2:rgba(30,23,74,.62); --line:rgba(181,124,245,.16); --line2:rgba(181,124,245,.34);
+  --acc:#9b7bff; --accf:rgba(155,123,255,.46); --sel:#ffa64d;
+  --hdr:52px; --sideW:300px; --r:10px;
+  --f:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font:13px/1.4 var(--f);
+  -webkit-font-smoothing:antialiased;overscroll-behavior:none;touch-action:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#gl{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#gl.drag{cursor:grabbing} #gl.pt{cursor:pointer} #gl.move{cursor:move}
+
+/* ---------- заголовок (header Blender) ---------- */
+#top{position:fixed;left:0;right:0;top:0;height:var(--hdr);display:flex;align-items:center;gap:14px;padding:0 12px 0 14px;
+  background:linear-gradient(180deg,rgba(9,6,30,.86),rgba(9,6,30,.55));border-bottom:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);z-index:5}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand img{border-radius:8px;box-shadow:0 0 0 1px var(--line2),0 0 18px rgba(155,123,255,.35)}
+.brand b{display:block;font-size:14px;font-weight:650;letter-spacing:.01em;white-space:nowrap}
+.brand small{display:block;color:var(--dim);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.views{display:flex;margin-left:auto;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+.views button{padding:5px 11px;border-radius:6px;color:var(--dim);font-weight:500;font-size:12.5px;white-space:nowrap}
+.views button:hover{color:var(--ink);background:rgba(155,123,255,.12)}
+.views button.on{color:#fff;background:var(--accf)}
+.tools{display:flex;gap:4px}
+.tools button{height:32px;min-width:32px;border-radius:8px;display:grid;place-items:center;color:var(--dim);border:1px solid transparent}
+.tools button:hover{color:var(--ink);background:rgba(155,123,255,.12)}
+.tools button.on{color:#fff;background:var(--accf);border-color:var(--line2)}
+.tools .txt{font-weight:600;font-size:12px;padding:0 8px;border:1px solid var(--line)}
+.ic svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- текст вьюпорта (как «User Perspective» в Blender) ---------- */
+#vtext{position:fixed;left:16px;top:calc(var(--hdr) + 12px);font:12px/1.55 var(--mono);color:var(--dim);pointer-events:none;z-index:2;
+  text-shadow:0 1px 6px #05031a}
+#vName{color:var(--ink);font-weight:500}
+#vObj b{color:var(--sel);font-weight:500}
+#vStats{margin-top:6px;white-space:pre;color:var(--mute)}
+#vStats i{font-style:normal;color:var(--dim)}
+
+/* ---------- гизмо навигации ---------- */
+#giz{position:fixed;top:calc(var(--hdr) + 10px);right:calc(var(--sideW) + 18px);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px;transition:right .25s}
+body.noside #giz{right:14px}
+#gz{width:96px;height:96px;border-radius:50%;cursor:grab;touch-action:none}
+#gz:hover{background:radial-gradient(circle,rgba(155,123,255,.13),rgba(155,123,255,0) 70%)}
+.gb{display:flex;flex-direction:column;gap:4px}
+.gb button{width:30px;height:30px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--dim);font-size:17px;line-height:1}
+.gb button:hover{color:var(--ink);border-color:var(--line2)}
+
+/* ---------- боковая панель N ---------- */
+#side{position:fixed;top:calc(var(--hdr) + 8px);right:8px;bottom:8px;width:var(--sideW);overflow:auto;z-index:4;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  padding:6px 10px 10px;scrollbar-width:thin;scrollbar-color:var(--line2) transparent;transition:transform .25s,opacity .25s}
+body.noside #side{transform:translateX(calc(100% + 16px));opacity:0;pointer-events:none}
+#side details{border-bottom:1px solid var(--line);padding:4px 0 10px}
+#side details:last-of-type{border-bottom:0}
+#side summary{list-style:none;cursor:pointer;font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:8px 2px 8px 18px;position:relative}
+#side summary::-webkit-details-marker{display:none}
+#side summary::before{content:'';position:absolute;left:3px;top:13px;border:4.5px solid transparent;border-top-color:var(--dim);border-bottom:0;transition:transform .15s}
+#side details:not([open]) summary::before{transform:rotate(-90deg)}
+.foot{color:var(--mute);font-size:11px;line-height:1.5;margin:10px 2px 0}
+
+/* outliner */
+.orow{display:grid;grid-template-columns:14px 1fr auto 26px;align-items:center;gap:8px;width:100%;text-align:left;padding:5px 6px;border-radius:7px}
+.orow:hover{background:rgba(155,123,255,.1)}
+.orow.on{background:rgba(255,166,77,.12);box-shadow:inset 0 0 0 1px rgba(255,166,77,.35)}
+.orow .dot{width:11px;height:11px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.orow .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.orow .nm small{display:block;font-weight:400;color:var(--dim);font-size:11px}
+.orow .ct{font:11px var(--mono);color:var(--dim)}
+.orow .eye{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:var(--dim)}
+.orow .eye:hover{background:rgba(155,123,255,.16);color:var(--ink)}
+.orow .eye svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+.orow.off .nm,.orow.off .dot{opacity:.35}
+
+/* ползунок-поле Blender: заливка = значение, подпись слева, число справа */
+.bf{position:relative;display:block;height:28px;margin:7px 0;border-radius:7px;background:rgba(8,6,26,.7);border:1px solid var(--line);overflow:hidden}
+.bf input{-webkit-appearance:none;appearance:none;position:absolute;inset:0;width:100%;height:100%;margin:0;background:transparent;cursor:ew-resize;touch-action:pan-y}
+.bf::before{content:'';position:absolute;left:0;top:0;bottom:0;width:var(--p,50%);background:linear-gradient(90deg,rgba(155,123,255,.28),var(--accf));pointer-events:none}
+.bf input::-webkit-slider-thumb{-webkit-appearance:none;width:3px;height:28px;background:#d9ccff;border-radius:1px;box-shadow:0 0 8px #b9a4ff}
+.bf input::-moz-range-thumb{width:3px;height:28px;background:#d9ccff;border:0;border-radius:1px}
+.bf .bl,.bf .bv{position:absolute;top:0;line-height:26px;pointer-events:none;font-size:12.5px}
+.bf .bl{left:10px;color:var(--ink)} .bf .bv{right:10px;font:12px/26px var(--mono);color:#fff}
+.bf:hover{border-color:var(--line2)}
+.note{color:var(--mute);font-size:11px;margin:-3px 2px 6px}
+.seg{display:flex;gap:4px;margin:8px 0}
+.seg button{flex:1;padding:6px 0;border-radius:7px;background:rgba(8,6,26,.7);border:1px solid var(--line);color:var(--dim);font-weight:500}
+.seg button.on{background:var(--accf);color:#fff;border-color:var(--line2)}
+.seg button:hover{color:var(--ink)}
+.energy{font:11px var(--mono);color:var(--mute);margin:4px 2px 0;display:flex;justify-content:space-between}
+.energy i{display:inline-block;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--acc),#ffb3e1);vertical-align:middle;margin-left:6px;transition:width .2s}
+
+/* ---------- карточка выбранного ---------- */
+#card{position:fixed;left:14px;bottom:14px;width:330px;z-index:4;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 16px 12px;box-shadow:0 18px 50px rgba(0,0,0,.45);animation:up .25s ease}
+@keyframes up{from{opacity:0;transform:translateY(8px)}}
+#card .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+#card .hd .dot{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 14px var(--c);flex:none}
+#card .hd b{font-size:16px;font-weight:700}
+#card .hd small{display:block;color:var(--dim);font-size:12px}
+#card .x{margin-left:auto;width:26px;height:26px;border-radius:7px;color:var(--dim);font-size:16px}
+#card .x:hover{background:rgba(155,123,255,.14);color:var(--ink)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:12.5px;margin:6px 0}
+.kv span{color:var(--dim)} .kv b{font:500 12.5px var(--mono);text-align:right}
+.bar{grid-column:1/-1;height:4px;border-radius:2px;background:rgba(155,123,255,.12);margin:-1px 0 3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--c);border-radius:2px}
+.sub{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin:10px 0 4px}
+.br{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:2px 0}
+.br .dot{width:8px;height:8px;border-radius:50%;background:var(--c)} .br b{margin-left:auto;font:500 12px var(--mono)}
+.tops{display:flex;flex-wrap:wrap;gap:5px}
+.tops span{font-size:11.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--line2);color:var(--ink);background:rgba(155,123,255,.07)}
+
+/* ---------- подписи в 3D ---------- */
+#labs{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.lb{position:absolute;left:0;top:0;transform-origin:0 0;white-space:nowrap;text-align:center;will-change:transform;
+  padding:2px 9px 3px;border-radius:9px;background:rgba(6,4,26,.5);box-shadow:0 0 0 1px rgba(181,124,245,.1)}
+.lb b{display:block;font-weight:700;font-size:13px;letter-spacing:.02em;color:#fff;text-shadow:0 0 10px var(--c),0 1px 3px #000}
+.lb small{display:block;font-size:11px;color:var(--dim);text-shadow:0 1px 3px #000}
+.lb.sun b{font-size:15px;letter-spacing:.12em}
+.lb.sel b{color:var(--sel)}
+.ml{position:absolute;left:0;top:0;font-size:11px;color:#efeaff;white-space:nowrap;text-shadow:0 1px 4px #000,0 0 8px rgba(0,0,0,.8);will-change:transform}
+#tip{position:fixed;z-index:6;pointer-events:none;background:rgba(10,7,32,.92);border:1px solid var(--line2);border-radius:8px;padding:5px 9px;font-size:12px;white-space:nowrap}
+#tip small{color:var(--dim);font:11px var(--mono);margin-left:6px}
+#hint{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);color:var(--mute);font-size:11.5px;z-index:2;pointer-events:none;
+  transition:opacity .6s;white-space:nowrap;text-shadow:0 1px 4px #000}
+body.used #hint{opacity:0}
+body.film #top,body.film #vtext,body.film #giz,body.film #side,body.film #card,body.film #hint,body.film #labs{display:none}
+
+/* ---------- телефон: панель N = нижний лист, заголовок в две строки ---------- */
+@media (max-width:760px){
+  :root{--hdr:92px;--sideW:0px}
+  #top{flex-wrap:wrap;height:var(--hdr);align-content:center;gap:8px 8px;padding:6px 10px}
+  .brand{flex:1 1 0;min-width:0} .brand>div{min-width:0} .brand b{overflow:hidden;text-overflow:ellipsis} .brand small{max-width:100%}
+  .views{order:3;margin-left:0;flex:1 1 100%;justify-content:space-between}
+  .views button{flex:1;padding:6px 0}
+  .tools button{height:30px;min-width:30px}
+  #vtext{left:12px;font-size:10.5px} #vStats{display:none}
+  #giz{right:10px!important;top:calc(var(--hdr) + 6px)} #gz{width:78px;height:78px}
+  #side{top:auto;left:8px;right:8px;bottom:8px;width:auto;max-height:58vh;border-radius:16px}
+  body.noside #side{transform:translateY(calc(100% + 16px))}
+  #card{left:8px;right:8px;width:auto;bottom:8px;max-height:46vh;overflow:auto}
+  body:not(.noside) #card{display:none}
+  #hint{display:none}
+  .lb b{font-size:11.5px} .lb small{display:none}
+}
+@media (prefers-reduced-motion:reduce){#side,#giz{transition:none}#card{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-label="3D graph"></canvas>
+<div id="labs" aria-hidden="true"></div>
+
+<header id="top">
+  <div class="brand"><img src="assets/icon.png" alt="" width="28" height="28"><div><b data-t="title"></b><small data-t="sub"></small></div></div>
+  <nav class="views" aria-label="views">
+    <button data-act="front" data-t="front"></button><button data-act="right" data-t="right"></button><button data-act="top" data-t="top"></button><button data-act="persp" id="bPersp"></button>
+  </nav>
+  <div class="tools">
+    <button data-act="frame" data-tt="frame" class="ic"><svg viewBox="0 0 20 20"><path d="M3 7V3h4M13 3h4v4M17 13v4h-4M7 17H3v-4"/><circle cx="10" cy="10" r="2.4"/></svg></button>
+    <button data-act="turn" data-tt="turn" class="ic" id="bTurn"><svg viewBox="0 0 20 20"><path d="M16.5 8.5A6.7 6.7 0 0 0 4.2 6.3M3.5 11.5a6.7 6.7 0 0 0 12.3 2.2"/><path d="M4 2.8v3.7h3.7M16 17.2v-3.7h-3.7"/></svg></button>
+    <button data-act="ovl" data-tt="overlays" class="ic" id="bOvl"><svg viewBox="0 0 20 20"><circle cx="7.6" cy="10" r="4.6"/><circle cx="12.4" cy="10" r="4.6"/></svg></button>
+    <button data-act="lang" id="bLang" class="txt"></button>
+    <button data-act="side" data-tt="side" class="ic" id="bSide"><svg viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12.5 3.5v13M14.5 7h1M14.5 10h1M14.5 13h1"/></svg></button>
+  </div>
+</header>
+
+<div id="vtext"><div id="vName"></div><div id="vObj"></div><div id="vStats"></div></div>
+<div id="giz"><canvas id="gz" width="96" height="96" aria-label="navigation gizmo"></canvas>
+  <div class="gb"><button data-act="zin" aria-label="zoom in">+</button><button data-act="zout" aria-label="zoom out">−</button></div></div>
+
+<aside id="side" aria-label="properties">
+  <details open><summary data-t="outliner"></summary><div id="outl"></div></details>
+  <details open><summary data-t="view"></summary><div id="pView"></div></details>
+  <details open><summary data-t="graph"></summary><div id="pGraph"></div></details>
+  <details open><summary data-t="physics"></summary><div id="pPhys"></div></details>
+  <p class="foot" data-t="foot"></p>
+</aside>
+
+<section id="card" hidden aria-live="polite"></section>
+<div id="tip" hidden></div>
+<div id="hint" data-t="hint"></div>
+<script>(()=>{'use strict';
+// Тексты EN · RU (выбор: ?lang=, иначе язык браузера). Подписи видов — как в Blender.
+const DATA={"planets":[{"k":"BLUE","agent":"NANO Sr","en":"AI & engineering","ru":"ИИ и инженерия","hex":"#3b5bdb","n":692,"pr":0.2957,"focus":0.801,"ein":4789},{"k":"GREEN","agent":"MATH","en":"Mathematics & science","ru":"Математика и наука","hex":"#22c55e","n":485,"pr":0.2074,"focus":0.807,"ein":3199},{"k":"RED","agent":"MANAGER","en":"Management & decisions","ru":"Менеджмент и решения","hex":"#ef4444","n":294,"pr":0.1178,"focus":0.701,"ein":1563},{"k":"LIGHT_BLUE","agent":"MITMonk","en":"Ethics & philosophy","ru":"Этика и философия","hex":"#7dd3fc","n":220,"pr":0.0969,"focus":0.698,"ein":1454},{"k":"LIGHT_RED","agent":"CFO","en":"Economics & finance","ru":"Экономика и финансы","hex":"#fde047","n":301,"pr":0.1245,"focus":0.742,"ein":1758},{"k":"PINK","agent":"BUBBLEGUM","en":"Me: ideas, taste, hobbies","ru":"Я: идеи, вкус, хобби","hex":"#f9a8d4","n":304,"pr":0.1257,"focus":0.589,"ein":1750}],"moons":[[0,226,197,0],[0,200,145,1],[0,199,148,2],[0,189,130,3],[0,169,108,4],[0,147,81,-1],[0,146,79,5],[0,143,72,6],[0,137,63,7],[0,133,60,-1],[0,119,53,8],[0,118,52,9],[0,118,53,10],[0,115,51,11],[0,115,50,12],[0,114,49,13],[0,111,46,14],[0,106,41,15],[0,105,42,16],[0,105,42,17],[0,103,26,18],[0,101,37,19],[0,101,38,20],[0,101,35,21],[0,98,35,-1],[0,97,34,22],[0,97,35,23],[0,97,36,24],[0,96,34,25],[0,96,34,26],[0,94,32,27],[0,94,31,28],[0,94,29,29],[0,94,32,30],[0,94,31,31],[0,93,31,32],[0,93,32,33],[0,93,33,34],[0,92,33,35],[0,92,32,36],[0,92,30,37],[0,91,28,38],[0,91,31,39],[0,90,31,40],[0,90,29,41],[0,90,30,42],[0,90,29,43],[0,90,30,44],[0,89,29,45],[0,89,30,46],[0,88,28,47],[0,88,30,48],[0,88,26,49],[0,88,27,50],[0,87,28,51],[0,87,25,52],[0,86,27,53],[0,86,25,54],[0,84,25,55],[0,84,15,-1],[0,83,25,56],[0,83,25,57],[0,83,21,58],[0,83,25,59],[0,83,25,60],[0,83,22,61],[0,83,25,62],[0,83,22,63],[0,82,24,64],[0,82,23,65],[0,82,22,-1],[0,82,24,66],[0,82,24,67],[0,82,23,68],[0,82,24,69],[0,81,25,70],[0,81,23,71],[0,81,22,72],[0,81,24,73],[0,81,23,74],[0,81,23,75],[0,81,23,76],[0,80,23,77],[0,80,22,78],[0,80,23,79],[0,80,24,80],[0,80,23,81],[0,80,23,82],[0,79,20,83],[0,79,20,84],[0,79,23,85],[0,79,21,86],[0,79,22,87],[0,79,23,88],[0,78,21,89],[0,78,22,90],[0,78,23,91],[0,78,22,92],[0,78,22,93],[0,77,22,94],[1,193,116,95],[1,171,108,-1],[1,166,102,96],[1,164,80,97],[1,147,83,98],[1,142,73,99],[1,136,64,100],[1,136,66,101],[1,128,61,102],[1,125,60,103],[1,123,56,104],[1,116,49,105],[1,113,49,106],[1,113,47,107],[1,109,41,108],[1,107,43,109],[1,106,35,110],[1,106,39,111],[1,105,40,112],[1,104,41,113],[1,104,39,114],[1,101,38,115],[1,100,37,116],[1,100,38,117],[1,100,35,118],[1,98,35,119],[1,97,32,-1],[1,97,29,120],[1,97,35,121],[1,95,30,122],[1,95,33,-1],[1,94,31,123],[1,93,32,124],[1,93,29,125],[1,93,31,126],[1,92,31,127],[1,92,28,128],[1,92,27,129],[1,91,29,130],[1,91,30,131],[1,90,23,132],[1,89,28,133],[1,89,30,134],[1,89,27,135],[1,88,26,136],[1,87,28,137],[1,87,22,138],[1,87,27,139],[1,87,21,140],[1,86,24,-1],[1,86,23,141],[1,85,25,142],[1,85,26,143],[1,84,25,144],[1,83,25,145],[1,82,24,146],[1,82,23,147],[1,82,24,148],[1,82,24,149],[1,82,23,150],[1,82,23,151],[1,82,22,152],[1,82,24,153],[1,82,23,154],[1,81,22,155],[1,81,22,156],[1,81,19,157],[1,81,23,158],[1,80,22,159],[1,80,22,160],[1,79,18,161],[1,79,22,162],[1,79,22,163],[1,79,22,164],[1,79,19,165],[1,79,22,166],[1,78,18,167],[1,78,22,168],[1,78,21,169],[1,78,22,170],[1,78,21,171],[1,78,21,172],[1,78,20,173],[1,78,22,174],[1,77,20,175],[1,77,21,176],[1,77,21,177],[1,77,19,-1],[1,77,19,178],[1,77,21,179],[1,76,19,180],[1,76,18,181],[1,76,21,182],[1,76,19,183],[1,75,18,184],[1,75,18,-1],[1,75,20,185],[1,75,19,186],[1,74,18,187],[1,74,19,188],[2,194,130,-1],[2,159,83,189],[2,154,81,190],[2,154,79,191],[2,129,51,192],[2,126,52,193],[2,110,37,194],[2,107,39,195],[2,103,34,196],[2,102,33,197],[2,94,28,198],[2,93,28,199],[2,91,26,200],[2,89,25,201],[2,89,26,202],[2,89,24,203],[2,84,23,204],[2,84,23,205],[2,83,21,206],[2,83,21,207],[2,82,20,208],[2,81,23,-1],[2,81,21,209],[2,81,21,210],[2,80,21,211],[2,80,20,212],[2,79,21,213],[2,79,19,214],[2,79,20,215],[2,79,19,216],[2,78,19,217],[2,76,17,218],[2,76,17,219],[2,75,18,220],[2,74,17,221],[2,73,17,222],[2,73,15,223],[2,73,15,224],[2,73,16,225],[2,73,16,226],[2,73,17,227],[2,73,17,228],[2,72,15,229],[2,72,15,230],[2,72,16,231],[2,72,14,232],[2,72,16,233],[2,72,16,234],[2,72,16,235],[2,72,15,236],[2,71,14,237],[2,71,14,238],[2,71,15,239],[2,71,16,240],[2,71,15,241],[2,70,14,242],[2,70,13,243],[2,70,14,244],[2,70,15,245],[2,70,14,246],[2,69,14,247],[2,69,13,248],[2,69,13,249],[2,69,14,250],[2,69,14,251],[2,69,14,252],[2,69,14,253],[2,69,15,254],[2,69,14,255],[2,68,13,256],[2,68,13,257],[2,68,14,258],[2,68,14,259],[2,68,14,260],[2,68,13,261],[2,68,13,-1],[2,68,14,262],[2,68,14,263],[2,68,13,264],[2,67,13,265],[2,67,13,266],[2,67,14,267],[2,67,14,268],[2,67,14,269],[2,67,12,270],[2,67,13,271],[2,66,13,272],[2,66,13,273],[2,66,13,274],[2,66,14,-1],[2,65,13,275],[2,65,13,276],[2,65,12,277],[2,65,13,278],[2,65,13,279],[2,65,12,280],[2,65,12,281],[2,65,12,282],[2,65,11,283],[2,65,11,284],[3,255,242,285],[3,156,86,286],[3,121,54,287],[3,110,46,288],[3,108,43,289],[3,101,36,290],[3,100,37,291],[3,100,35,292],[3,99,36,293],[3,98,35,294],[3,95,32,295],[3,93,30,296],[3,91,30,-1],[3,90,29,297],[3,90,27,298],[3,90,29,299],[3,88,28,300],[3,88,27,301],[3,86,26,302],[3,84,24,303],[3,83,24,304],[3,83,24,305],[3,83,23,306],[3,81,23,307],[3,81,23,308],[3,80,19,309],[3,80,22,310],[3,79,19,311],[3,79,22,312],[3,79,22,313],[3,79,21,-1],[3,79,22,314],[3,78,21,-1],[3,78,21,315],[3,77,21,316],[3,77,21,317],[3,77,20,318],[3,77,20,319],[3,77,21,320],[3,76,20,321],[3,76,19,322],[3,75,20,323],[3,75,18,324],[3,75,19,325],[3,74,19,326],[3,74,19,327],[3,74,19,328],[3,74,18,329],[3,73,18,330],[3,73,18,331],[3,73,17,332],[3,73,18,333],[3,73,18,334],[3,72,18,335],[3,72,18,336],[3,72,17,337],[3,72,17,338],[3,71,17,339],[3,71,16,340],[3,71,17,341],[3,70,17,342],[3,70,17,343],[3,70,15,344],[3,70,16,345],[3,69,16,346],[3,69,16,347],[3,69,16,348],[3,69,16,349],[3,69,16,350],[3,68,16,351],[3,68,15,352],[3,68,16,353],[3,68,15,354],[3,68,16,355],[3,68,15,356],[3,67,14,357],[3,67,15,358],[3,67,15,359],[3,67,15,360],[3,67,15,361],[3,67,14,362],[3,67,15,363],[3,67,15,-1],[3,67,14,364],[3,67,15,365],[3,67,15,366],[3,66,15,367],[3,66,14,368],[3,66,14,369],[3,66,14,370],[3,66,14,371],[3,66,15,372],[3,66,13,373],[3,66,14,374],[3,65,14,375],[3,65,14,376],[3,65,14,377],[3,65,14,378],[3,65,14,379],[3,65,14,380],[4,145,69,381],[4,140,67,382],[4,139,71,383],[4,126,53,384],[4,125,50,385],[4,124,50,386],[4,110,38,387],[4,109,40,388],[4,101,32,389],[4,101,33,390],[4,98,31,391],[4,97,32,392],[4,96,31,393],[4,95,32,394],[4,93,28,-1],[4,92,28,395],[4,91,29,-1],[4,91,28,396],[4,90,30,397],[4,90,25,398],[4,88,24,399],[4,87,25,400],[4,87,27,401],[4,86,24,402],[4,86,26,403],[4,85,23,404],[4,85,25,405],[4,85,23,406],[4,84,24,407],[4,83,23,408],[4,81,21,409],[4,81,20,410],[4,81,19,411],[4,80,20,-1],[4,80,20,412],[4,80,22,413],[4,79,18,414],[4,79,21,415],[4,77,18,416],[4,77,19,417],[4,77,19,418],[4,77,19,419],[4,77,18,420],[4,76,17,421],[4,76,20,422],[4,76,20,423],[4,76,17,424],[4,75,17,425],[4,75,17,426],[4,75,19,-1],[4,75,17,427],[4,75,17,428],[4,75,18,429],[4,75,19,430],[4,74,17,431],[4,74,16,432],[4,74,17,433],[4,73,17,434],[4,73,16,435],[4,73,15,436],[4,73,17,437],[4,73,17,438],[4,73,16,439],[4,73,16,440],[4,73,16,441],[4,73,17,442],[4,73,16,443],[4,72,16,444],[4,72,16,445],[4,71,16,-1],[4,71,15,446],[4,71,15,447],[4,71,15,448],[4,71,15,449],[4,71,14,450],[4,71,15,451],[4,71,16,452],[4,70,15,453],[4,70,16,454],[4,70,16,455],[4,70,14,456],[4,70,14,457],[4,70,14,-1],[4,70,14,-1],[4,69,16,458],[4,69,14,459],[4,69,14,460],[4,68,14,461],[4,68,13,462],[4,68,15,463],[4,68,13,464],[4,68,13,465],[4,68,14,466],[4,67,15,467],[4,67,15,468],[4,67,13,469],[4,67,14,470],[4,67,13,471],[4,67,13,472],[4,67,14,473],[5,169,100,-1],[5,163,78,-1],[5,152,79,-1],[5,143,83,-1],[5,131,59,-1],[5,128,65,-1],[5,124,65,-1],[5,109,47,-1],[5,108,39,-1],[5,104,45,-1],[5,98,34,-1],[5,97,37,-1],[5,95,29,-1],[5,95,35,-1],[5,94,33,-1],[5,93,30,-1],[5,91,27,-1],[5,90,31,-1],[5,89,31,-1],[5,89,31,-1],[5,88,30,-1],[5,87,30,-1],[5,87,29,-1],[5,84,25,-1],[5,84,29,-1],[5,84,27,-1],[5,84,25,-1],[5,84,25,-1],[5,83,28,-1],[5,82,23,-1],[5,81,24,-1],[5,81,24,-1],[5,81,19,-1],[5,81,27,-1],[5,81,24,-1],[5,80,23,-1],[5,79,26,-1],[5,79,24,-1],[5,79,22,-1],[5,78,22,-1],[5,78,23,-1],[5,78,25,-1],[5,78,23,-1],[5,76,21,-1],[5,76,22,-1],[5,76,19,-1],[5,75,23,-1],[5,75,19,-1],[5,74,17,-1],[5,74,20,-1],[5,74,22,-1],[5,74,21,-1],[5,74,17,-1],[5,74,20,-1],[5,74,22,-1],[5,73,16,-1],[5,73,21,-1],[5,73,21,-1],[5,73,20,-1],[5,73,20,-1],[5,73,18,-1],[5,72,15,-1],[5,72,21,-1],[5,72,20,-1],[5,72,19,-1],[5,72,20,-1],[5,72,18,-1],[5,72,19,-1],[5,72,17,-1],[5,72,18,-1],[5,71,17,-1],[5,71,17,-1],[5,71,19,-1],[5,71,20,-1],[5,71,19,-1],[5,71,17,-1],[5,71,19,-1],[5,71,19,-1],[5,71,19,-1],[5,71,20,-1],[5,71,18,-1],[5,71,18,-1],[5,70,19,-1],[5,70,17,-1],[5,70,16,-1],[5,70,18,-1],[5,69,19,-1],[5,69,19,-1],[5,69,19,-1],[5,69,19,-1],[5,69,16,-1],[5,69,17,-1],[5,69,17,-1],[5,69,18,-1],[5,68,17,-1],[5,68,17,-1],[5,68,17,-1],[5,68,17,-1],[5,68,18,-1],[5,68,16,-1]],"labels":["Agents","ML","LLM","Tools infra","Evals","RAG","NANO core","Software eng","LLM wiki pattern","Pretraining next token","Human in the loop","Context window long context","RAG pipeline","LLM as judge","Embeddings","ML bias variance tradeoff","Agent memory types","Observability tracing","Security","Vector databases ann","Agent cost latency tradeoffs","Docker compose agent stack","ML proper scoring rules","Eval statistical significance","Multi agent orchestration","Attention mechanism","Uncertainty triggered escalation","Kv cache inference","Hybrid search bm25","Engineering practices","Agent sandboxing","Quantization distillation","Structured outputs json schema","Operator attention budget","Agent team roles","Planning decomposition","Agent escalation policy","Durable execution agents","Claude code workflow","Agent failure modes","Agent guardrails","ML cross entropy softmax","LLM evals basics","Traceability as agentic trust","Tool use function calling","Attention variants kv cache","Silent wrongness over crash","ML kl divergence","Agent loop","Retrieval metrics recall mrr ndcg","Deploy mandatory for MVP","Grounding citations","Scaling laws","Decoding sampling temperature","Mcp protocol","Eval dataset curation","Ppo kl penalty","RAG evals faithfulness","Force directed graph layout","Calibration uncertainty","ML empirical risk minimization","Fail fast error handling","Context engineering","Continuous integration basics","ML logistic regression","Conversation compaction","ML likelihood as loss","Claude code hooks","Benchmark construct validity","Reranking cross encoder","Hallucination compounding","Chain of thought","Transformer architecture","Agent evals trajectories","Structured logging correlation ids","Instruction tuning sft","Red teaming prompt injection","ML gaussian mixture models","Test time compute reasoning models","Benchmarks mmlu swebench","Reflexion self critique","False completion claims","Long horizon tasks","Timeouts and cancellation","Testing LLM code with fakes","Orchestrator worker pattern","Token pricing input output cache","ML feature scaling conditioning","LLM proposes code executes","Overengineering red flags","Agent one job","Workflow vs agent","Eval statistical inference","Delegation brief subagent","Trading agent kill switch","Algorithms","Probability","Discrete","Gradient descent","Optimization","Analysis","Graphs research","Linalg","Graph laplacian","Eigenvalues eigenvectors","Hypothesis testing","Expectation variance","Graph as neural second brain","Numla","Point estimation mle","Complex","Ode","Convex sets functions","Spectral gap search speed","SVD","Independence covariance","Positive definite matrices","Gradient","Funcan","Conditional probability bayes","Greedy algorithms","Central limit theorem","Directed steiner network","Lagrangian duality","Stochastic gradient descent","Qr decomposition householder","Convergence of random variables","Newton method","Graphs","Residue theorem","Condition number","Inner product orthogonality","Asymptotic notation","Gmres preconditioning","Spectral theorem","Power series","Normed banach spaces","Common distributions","Decidability reductions","Concentration inequalities","Boolean algebra","Randomized algorithms","Matrix norms","Gradient flow","Law of large numbers","Orthogonal projection least squares","Gd convergence rates","Determinant","Gaussian stochastic processes","L smoothness step size","Chain rule jacobian","Fourier series","Existence uniqueness picard","Conditional expectation martingales","Matrix exponential","Multivariable differentiability","Numeric series convergence","Classic np complete problems","Power method","Taylor formula","Random graph models","Bfs dfs","Rank nullity","Linear maps matrices","Random variables distributions","Hashing randomized structures","Markov chains","Holomorphic cauchy riemann","Rayleigh quotient courant fischer","Lyapunov stability","Confidence intervals","Random walks on graphs","Hilbert spaces projection","Linear ode systems","Personalized pagerank as search","Cauchy criterion","Semidefinite programming","Vector spaces basis","Q color vs q louvain gap","Spectral theory operators","Floating point stability","Function limit continuity","Hessian second order conditions","Linear programming simplex","Riemann integral","Lanczos method","Least squares numerical","Lp relaxation rounding","Jordan normal form","Strategy","HRM","Org behavior","Operations","Organizational behavior","Lean toyota production system","Corporate governance","Networking","Peak performance","Bounded rationality","Organizational justice","Marketing strategy","Capital allocation","Value metric tiered pricing","Demand forecasting ops","Performance management cycle","Decision trees expected value","Balanced scorecard okr","Porter generic strategies","Business model canvas","Expectancy theory vroom","Adverse impact four fifths","Self determination theory","Automation bias complacency","Eu AI act hr high risk","Firm advantage and boundaries","Human machine function allocation","Psychological safety","Career development paths","Supplier segmentation kraljic","Porter five forces","People analytics","Psychological contract","Compensation total rewards","Human AI collab research gap","Stp segmentation targeting positioning","Strategy formulation and goals","Job analysis competency models","Three sources of bias hr","Contestability hr AI decisions","Strategic alliances joint ventures","Decision making classification","HRM core functions","Capacity planning utilization","Algorithmic management","Selection methods validity","Algorithmic performance evaluation","Group decision expert techniques","Human capital index","Safety stock service level","Value chain","Hr algorithm bias audit","Groupthink","Swot matrix","Six sigma dmaic","Ansoff matrix","Pay for performance","Vertical integration make or buy","Core competencies","Sales operations planning","Littles law queueing","Resource based view vrio","Scenario planning","Workforce planning","Churn net revenue retention","Job characteristics model","Decision individual vs group","Supply chain risk resilience","Power influence bases","Lean startup validated learning","Recruitment funnel sourcing","Organizational trust abi model","Pricing strategies","Applicant reactions gilliland","Shared mental models","Social cognitive theory bandura","Classical marketing frameworks","Deliberate vs emergent strategy","Performance appraisal biases","Transactive memory systems","Employee onboarding","Service level agreement sla slo","Management org structures","Bcg growth share matrix","Human AI complementarity","Turnover retention","Team effectiveness imoi model","Decision quality vs outcome","Organizational ambidexterity","Trust calibration automation","Proxy discrimination hr data","Switching costs lock in","Public sector AI adoption","Dynamic capabilities","Decoupling point mts mto","B2b pitch structure","Ethics core","Philosophy core","Literacy","Literacy three levels","Ethics","Functionalism","Rogue agent non malicious risk","Algorithmic fairness definitions","Prompt as new literacy","Deontology kant","Accountability responsibility gap","Consequentialism utilitarianism","Governance is managerial","Bounded rationality satisficing simon","Learning science","Governance not afterthought","Transparency explainability","Eu AI act risk tiers","Proxy discrimination","Algorithmic auditing","Human autonomy manipulation","Bayesian epistemology","Tamper evident agent logs","Deceptive alignment sycophancy","Thinkers","Algorithmic impact assessment","152 fz","Goodhart law","Intelligent gym AI spotter","Metacognitive laziness","Human oversight meaningful control","Least privilege agents","Irreversible action gating","Moral uncertainty","Agi definition","Literacy tone new rules","AI alignment problem","Bias sources ML pipeline","Specification gaming reward hacking","Scalable oversight","Privacy data protection","Autonomous agent liability","Socratic tutor","Drag framework","Raci human AI decisions","Automation bias","Learner evaluation of AI answers","Falsifiability popper","Cognitive offloading AI","Fairness paradox","Principal agent problem AI delegation","Generation effect AI first attempt","Moral agency patiency","Existential risk debate","Right to explanation contestability","System 1 2 AI","Desirable difficulties","Executive AI literacy drives speed","Agent identity attribution","Cloud security maturity analog to AI","LLM provider data retention","Reweighing preprocessing","Assessment redesign AI era","Nist AI rmf","Caio as team not solo","Corrigibility shutdown","Live prompting think aloud session","Occams razor parsimony","Literacy assessment performance vs self report","Target variable label bias","Worked examples fading","Human AI decision audit trail","Underdetermination duhem quine","Responsible scaling policies","Disparate impact four fifths","Informed consent data","Lateral reading verifying AI output","Intentionality symbol grounding","Model cards datasheets","Problem of induction hume","Principal hierarchy model spec","Leading questions confirmation prompts","Stakes proportional verification","Fairness accuracy tradeoff","Chinese room searle","Virtue ethics aristotle","Is ought gap hume","Constitutional governance human amendment","Meaning as use wittgenstein","Contractualism rawls veil","Engagement vs learning metrics","Biometric surveillance","Parasocial attachment AI tutor","Fluency illusion AI reading","Knowledge tracing learner model","Data hygiene chatbots","Micro","Markets","Quant","Econometrics","Macro","Finance","Macroeconomics","Efficient market hypothesis","Monetary policy tools","Corporate finance","Economics fundamentals","Stationarity unit roots","Crypto derivatives leverage","Derivatives and tail risk","Order book microstructure","Capm model","Survivorship bias","OLS gauss markov","Game theory information","Price impact kyle","Backtest overfitting","Wacc cost of capital","Fat tails evt","Bond pricing ytm","Var expected shortfall","Consumer choice behavioral","Garch volatility","Behavioral prospect theory","Clearing margin","Rct field experiments","Monopoly deadweight loss","Game theory nash equilibrium","Transaction costs slippage","Supply demand equilibrium","Geometric brownian motion","Financial statements cash flow","Bid ask spread liquidity","High frequency trading","Information asymmetry lemons","Npv investment criterion","Market structures","Drawdown metrics","Markowitz mean variance","T f tests regression","Consumer choice optimization","Income statement ebitda ebit","Business cycles","Free cash flow fcff fcfe","Arima forecasting","Kelly position sizing","Capital structure definitions","Taylor rule","Team specific knowledge moat","Moral hazard principal agent","Corporate hedging fx interest rate","Causal inference potential outcomes","Crisis 2008 lessons","Superstar firms","Utility preferences","Mechanism design auctions","Present value time value money","Expected utility risk aversion","Fisher equation real interest rate","Short selling limits to arbitrage","Market making inventory risk","Transaction costs theory of firm","Zero lower bound qe","Call auctions opening closing","Liquidity solvency ratios","Fiscal policy tools","Profitability ratios roe roa ros","Insurance basics","Dividend discount gordon","Black scholes merton","Fama french factors","Clustered standard errors","Instrumental variables 2sls","Momentum mean reversion","Inflation measurement cpi","Operating financial leverage","Dividend policy buybacks","Difference in differences","Stress testing scenario analysis","Rational expectations lucas critique","Defi liquid staking looping leverage","Glosten milgrom adverse selection","Log vs simple returns","Sharpe efficient frontier","Defi health factor liquidation cascade","Maximum likelihood estimation","Sensitivity scenario analysis capital budgeting","Platform network effects","Time series factor anomalies"],"edges":[98,39,98,35,98,0,98,95,98,38,98,36,55,84,55,11,55,83,55,17,55,9,55,1,43,39,43,22,43,51,43,81,43,35,43,12,43,33,43,72,43,0,43,42,43,47,43,93,43,99,4,78,4,84,4,63,4,58,4,26,4,15,4,45,4,61,4,81,4,73,4,49,4,0,4,97,4,75,4,5,4,2,4,3,4,6,4,1,51,78,51,96,51,47,51,76,51,72,51,75,51,18,51,49,51,0,51,38,51,19,51,33,51,12,51,87,51,90,51,85,66,22,66,18,66,27,66,13,66,0,66,86,66,69,66,14,66,87,65,67,65,23,65,8,65,88,65,32,40,3,40,46,94,3,94,24,59,20,59,7,10,42,10,18,10,13,10,31,10,14,10,74,10,16,10,75,10,9,10,5,10,7,10,24,10,57,10,46,10,0,10,6,22,95,22,30,22,27,22,19,22,3,22,18,22,13,22,56,22,15,22,45,22,96,22,34,22,35,16,18,16,28,16,13,16,31,16,14,16,74,16,21,16,9,16,6,16,1,33,78,33,42,33,12,33,72,33,19,33,81,33,3,33,47,33,99,35,56,35,80,35,15,35,38,35,47,35,95,35,49,35,3,35,32,35,79,9,75,9,57,9,46,9,77,9,5,9,70,9,24,9,0,9,2,13,18,13,28,13,30,13,54,13,14,13,2,13,69,13,27,13,91,13,6,11,63,11,56,11,80,11,15,11,19,11,14,11,75,11,2,11,77,11,83,11,50,11,44,11,1,52,31,52,6,52,14,52,74,54,61,54,14,54,6,54,15,75,78,75,42,75,18,75,63,75,76,75,80,75,87,75,38,75,85,75,86,75,0,77,28,77,1,63,12,63,45,63,56,63,38,63,14,63,25,63,26,63,74,24,49,24,0,24,2,24,5,23,53,23,3,23,88,8,67,8,62,8,89,8,88,8,5,8,20,8,32,50,44,50,82,50,34,50,1,50,29,50,71,50,25,84,45,84,78,84,47,84,73,84,58,84,26,84,15,84,87,12,39,12,72,12,38,12,46,12,49,12,0,12,36,12,29,12,19,12,81,12,47,12,99,12,7,2,28,2,76,2,69,2,56,2,80,2,30,2,60,2,34,2,83,2,91,2,29,2,0,2,48,2,38,2,70,2,41,2,5,2,3,2,6,2,1,38,37,38,18,38,76,38,56,38,87,38,27,38,90,38,96,38,0,38,85,38,47,38,49,96,95,96,37,96,27,96,90,96,93,96,49,96,53,96,5,96,0,18,14,18,85,18,31,18,74,18,0,18,21,18,87,18,6,18,7,34,80,34,30,34,45,34,49,34,21,20,5,20,7,48,28,48,30,48,91,69,91,69,93,47,78,47,80,47,15,47,14,47,81,47,57,47,0,47,93,31,74,31,14,31,21,31,6,87,42,87,0,87,85,87,99,95,72,95,41,95,5,95,0,95,27,95,90,28,30,28,74,28,19,28,44,5,72,5,46,5,0,5,1,5,6,5,3,5,7,5,70,5,41,86,42,86,72,86,36,86,0,53,37,53,3,42,49,42,78,42,27,42,0,42,99,7,0,7,3,7,41,14,21,14,74,14,6,15,78,15,19,15,85,15,81,15,45,15,61,15,17,39,0,39,37,39,36,39,29,39,25,90,27,90,85,90,0,90,37,25,44,25,71,25,68,25,64,25,1,25,29,72,81,72,41,72,3,72,0,91,30,91,83,30,56,58,26,58,45,58,61,93,0,93,99,93,49,46,27,46,19,46,79,46,3,67,89,67,32,60,80,83,76,73,45,32,89,32,88,19,78,19,45,19,27,19,49,19,3,19,79,19,0,78,49,78,27,78,45,78,81,74,6,74,21,29,81,29,0,85,37,85,76,85,0,88,89,64,17,64,44,64,71,64,68,64,1,6,21,6,0,6,3,71,44,71,82,71,1,71,68,56,76,56,44,17,1,17,92,44,1,44,68,81,45,81,57,68,92,68,1,27,37,27,0,99,0,36,0,79,3,0,37,0,76,0,3,92,1,92,82,41,3,57,3,26,45,26,61,1,82,45,61,139,110,139,104,139,109,139,181,139,121,139,122,139,171,139,123,139,108,139,154,139,142,139,186,139,189,139,160,102,128,102,145,102,147,102,162,102,125,102,179,102,134,102,112,102,111,102,121,102,153,102,175,102,115,102,169,102,173,102,180,102,150,102,101,102,100,102,116,102,103,102,124,102,109,102,157,102,135,102,106,102,108,102,105,153,128,153,147,153,134,153,112,153,121,153,175,153,115,153,132,153,180,129,159,129,166,129,160,129,132,129,101,129,107,129,193,129,100,176,164,176,116,176,159,176,106,143,128,143,134,143,110,143,161,143,160,143,104,143,163,143,165,143,168,143,106,143,137,143,183,195,126,195,101,195,107,195,136,152,161,152,104,152,158,152,123,152,178,152,118,152,132,152,155,152,109,152,163,152,119,152,117,152,122,152,142,152,101,189,110,189,160,189,109,189,199,189,172,189,154,189,171,189,177,189,142,189,120,189,186,189,124,166,100,131,130,131,118,131,105,131,193,131,185,131,198,186,156,186,110,186,172,186,182,186,144,186,171,186,160,186,120,186,109,186,108,188,109,188,169,188,126,188,101,188,107,188,185,188,149,103,148,103,146,103,127,103,101,103,100,103,106,103,136,122,104,122,123,122,109,122,121,122,178,122,154,122,115,122,142,122,185,122,192,122,135,122,108,122,177,151,138,151,110,151,104,151,163,151,120,151,165,151,158,151,108,151,142,151,177,151,144,117,161,117,199,117,182,117,178,117,163,117,137,117,142,117,101,117,116,117,124,117,108,117,114,117,106,117,105,117,104,117,164,104,184,104,159,104,138,104,118,104,110,104,161,104,160,104,155,104,123,104,168,104,158,104,135,104,132,104,105,104,109,104,192,104,196,104,197,104,165,104,154,104,171,104,177,104,142,104,120,104,178,104,163,104,164,104,183,104,167,104,119,104,115,104,101,104,106,104,124,104,136,125,145,125,162,125,115,125,111,125,121,125,175,125,112,160,128,160,134,160,194,160,165,160,106,160,137,180,170,180,112,180,109,180,175,180,169,180,177,180,167,180,183,180,119,180,174,180,150,111,128,111,179,111,112,111,173,111,115,111,169,111,121,118,147,118,192,118,105,118,135,118,193,118,185,118,112,118,191,118,181,118,115,133,138,133,156,133,190,133,141,133,196,133,197,133,114,133,120,164,159,164,191,164,123,164,192,164,172,164,106,164,194,105,155,105,158,105,193,105,198,105,135,105,115,105,185,105,132,105,101,105,100,105,106,105,124,105,108,105,114,105,123,145,128,145,169,145,179,145,115,145,173,145,112,145,157,185,130,185,161,185,193,185,198,185,178,185,119,161,158,161,178,121,128,121,112,121,109,121,142,121,120,121,115,121,173,156,171,156,110,156,109,156,108,156,172,156,182,113,130,113,183,113,119,113,107,113,101,113,187,113,136,113,126,137,110,137,182,137,178,137,163,137,165,137,116,137,168,101,130,101,170,101,183,101,119,101,126,101,107,101,109,101,136,101,100,101,108,101,124,101,106,101,116,101,114,101,123,101,132,101,135,101,187,136,126,136,107,136,149,136,130,136,100,199,110,199,163,199,182,199,168,199,108,199,172,199,142,107,193,107,119,107,126,107,149,107,183,112,128,112,147,112,162,112,179,112,134,112,132,112,169,112,173,112,175,112,115,178,110,178,123,178,159,178,163,144,184,144,181,144,158,144,124,144,108,147,162,147,132,147,169,147,179,147,128,147,174,147,134,147,198,147,150,124,181,124,116,124,108,124,106,181,162,181,109,181,154,132,159,132,162,132,134,132,165,132,150,132,155,132,158,187,130,187,119,197,138,197,190,197,141,197,154,197,120,197,123,197,196,197,109,197,114,130,119,130,184,130,149,169,128,169,162,169,179,169,109,169,115,177,123,177,109,177,196,177,167,177,142,177,108,177,192,135,155,135,141,135,192,135,158,135,168,135,142,135,115,175,162,175,109,175,110,175,167,175,163,192,110,192,123,192,168,192,106,192,142,192,158,192,115,108,110,108,109,108,172,108,154,108,171,108,142,108,120,108,100,108,116,108,114,108,123,108,141,108,119,108,106,170,100,170,127,115,128,115,179,115,134,154,162,154,141,154,109,154,123,154,120,154,159,196,141,196,109,196,167,196,190,196,138,196,119,196,114,196,142,196,120,159,123,159,106,159,191,159,194,159,172,159,116,158,155,158,123,158,168,158,167,167,110,167,141,167,109,167,183,167,119,167,114,155,184,155,138,155,123,155,119,109,110,109,171,109,119,109,163,109,142,109,198,109,182,109,120,109,183,109,172,140,100,140,106,128,134,128,168,128,179,128,157,128,173,150,100,150,174,173,134,168,190,168,123,168,142,168,106,106,184,106,191,106,123,106,165,106,194,106,116,106,114,190,138,190,114,184,165,184,191,184,123,184,183,149,127,149,119,179,134,120,138,120,141,120,171,120,142,119,110,119,183,171,110,171,172,165,134,165,110,165,194,123,142,162,134,100,148,100,146,100,127,100,198,100,174,198,193,141,138,141,114,138,114,142,110,142,163,182,110,182,163,163,110,110,172,110,183,110,114,207,213,207,203,207,201,207,200,207,238,227,260,227,297,227,239,227,292,227,232,227,263,227,264,227,242,227,252,227,259,227,201,231,232,231,219,231,251,231,261,231,204,231,259,231,269,231,252,262,245,262,206,262,204,262,251,262,284,271,291,271,201,271,280,271,292,271,214,246,270,246,234,246,253,246,241,246,202,246,248,246,216,246,276,264,217,264,280,264,213,264,297,264,201,264,259,259,242,259,252,259,260,259,232,259,201,259,280,252,220,252,260,252,232,252,219,252,269,252,206,252,201,252,263,252,204,204,245,204,298,204,215,204,206,204,251,204,261,204,284,204,256,204,269,204,202,204,243,204,200,204,201,204,203,209,275,209,203,209,200,209,221,209,208,228,225,228,287,228,267,228,224,228,203,228,293,228,239,228,277,228,273,228,290,228,282,203,225,203,268,203,222,203,249,203,254,203,287,203,267,203,285,203,211,203,270,203,229,203,224,203,273,203,277,203,278,203,290,203,282,203,293,203,202,203,205,203,200,203,201,203,236,203,208,258,248,258,230,258,202,258,235,258,216,258,281,258,234,258,223,253,248,253,276,253,241,253,223,253,247,253,202,253,233,253,294,220,255,220,212,220,279,220,299,220,201,232,279,232,255,232,297,232,263,232,201,232,219,232,212,232,295,219,279,219,257,219,274,219,237,219,206,219,286,219,201,219,212,268,249,268,243,268,210,268,205,268,254,268,277,268,290,268,282,274,279,274,237,274,212,274,201,295,266,295,263,295,214,295,201,278,222,278,224,278,210,278,205,224,222,224,267,224,218,224,235,224,205,233,223,233,226,233,229,233,202,233,288,233,247,233,265,233,240,233,216,233,272,243,210,243,249,243,205,243,285,243,256,275,299,275,201,275,208,277,282,277,290,277,254,277,225,277,293,210,225,210,205,210,238,210,200,210,222,210,215,292,201,292,297,292,260,292,280,292,242,247,223,247,276,247,239,247,281,247,240,247,202,247,294,247,272,282,290,282,293,282,225,282,205,282,273,282,249,240,226,240,211,240,281,240,202,239,244,239,260,239,202,239,265,239,267,257,279,257,260,257,237,257,201,257,286,257,212,269,298,269,251,269,245,286,279,286,260,286,201,286,255,286,213,261,245,261,215,261,265,249,205,249,254,296,200,294,223,294,202,222,205,222,238,222,267,222,218,222,235,237,279,237,212,237,201,293,225,293,287,293,273,266,201,266,214,266,218,266,206,279,201,279,255,279,212,215,298,215,251,215,265,265,230,265,263,265,202,265,288,265,250,265,272,276,248,276,211,276,272,276,202,276,241,200,289,200,244,200,202,200,201,200,205,200,212,200,221,245,206,245,284,255,263,255,212,255,201,244,283,244,250,244,226,244,216,244,202,244,205,263,260,263,297,263,250,263,202,263,201,283,230,283,234,283,272,283,288,283,216,283,202,299,201,285,205,241,248,241,211,241,234,241,202,241,216,217,291,217,213,217,201,281,248,281,226,281,211,281,202,281,235,281,216,208,221,242,260,242,297,242,201,288,230,288,235,288,211,288,202,288,234,225,254,225,287,284,206,284,218,251,298,291,201,291,213,250,202,212,201,212,205,213,201,213,280,229,254,229,211,229,206,229,273,229,290,202,223,202,248,202,230,202,235,202,216,202,234,202,272,202,205,202,226,202,201,218,201,218,256,218,206,218,238,218,280,230,272,230,223,230,234,230,216,290,287,290,216,290,205,290,273,248,216,248,211,248,287,297,260,297,280,297,201,211,235,211,206,211,226,211,216,211,234,211,270,211,273,267,205,223,272,223,216,234,273,234,216,270,205,256,206,280,201,280,238,254,205,201,260,201,214,201,238,205,273,205,238,206,216,216,235,327,300,327,363,378,395,378,321,378,309,378,311,378,300,378,343,378,363,378,315,349,371,349,397,349,379,349,385,349,348,349,324,349,365,349,302,349,315,349,386,339,342,339,393,339,336,339,368,339,324,339,341,339,306,339,337,339,300,339,311,339,309,339,356,339,390,339,389,339,353,310,361,310,344,310,355,310,300,310,317,310,368,310,306,310,313,310,323,310,309,310,357,310,374,310,347,310,320,310,333,310,381,310,388,310,384,385,371,385,379,385,324,385,348,385,331,385,386,385,302,385,354,385,369,385,396,302,371,302,345,302,365,302,348,302,351,302,399,302,359,302,394,302,397,302,354,302,398,302,379,302,369,302,331,302,396,302,386,302,373,302,300,302,315,302,303,302,332,302,304,380,324,380,388,380,305,380,337,380,301,380,392,380,355,365,371,365,345,365,348,365,399,365,338,365,332,355,368,355,393,355,309,355,305,355,318,355,306,355,301,393,307,393,377,393,311,393,352,393,336,393,301,393,309,393,389,330,313,330,303,330,367,330,362,330,326,330,360,330,316,330,306,330,304,330,300,340,307,340,390,340,381,340,300,340,377,340,352,340,364,340,319,340,309,340,395,340,387,340,372,309,313,309,307,309,368,309,377,309,318,309,321,309,381,309,343,309,317,309,352,309,316,309,311,309,389,309,301,309,304,309,390,309,336,309,306,350,381,350,376,350,342,350,322,350,383,350,328,350,337,350,301,350,305,350,370,350,375,357,326,357,395,357,333,357,319,357,317,357,321,357,343,357,300,357,320,357,374,323,361,323,320,323,374,323,300,387,307,387,328,387,300,387,352,387,364,387,347,368,391,368,300,368,306,368,336,368,311,368,356,368,366,368,342,368,322,383,322,383,305,383,390,383,370,383,341,383,301,383,375,315,351,315,359,315,394,315,324,315,328,315,343,315,397,315,354,315,329,315,398,315,331,315,373,322,382,322,356,322,342,322,301,322,358,322,336,322,311,322,314,322,370,322,375,317,303,317,395,317,381,317,319,317,388,317,300,317,398,317,384,382,308,382,304,382,301,382,346,382,329,382,392,382,370,359,351,359,346,359,394,359,397,359,398,359,345,359,354,359,331,305,337,305,324,305,328,305,321,305,342,305,341,305,388,305,301,305,392,305,370,305,375,305,300,396,321,396,351,396,379,396,331,396,345,318,313,318,326,318,395,318,377,318,300,318,381,318,307,318,366,318,303,318,316,318,321,318,333,346,303,346,351,346,308,346,304,346,300,346,329,346,353,346,347,346,373,306,361,306,313,306,367,306,362,306,307,306,324,306,356,306,341,306,352,306,316,306,334,306,304,306,300,306,366,353,361,353,344,353,334,353,328,353,341,353,384,353,335,353,300,353,391,376,326,376,356,376,366,376,328,376,300,376,316,376,336,376,342,376,314,381,320,381,307,381,326,381,300,381,316,381,366,335,361,335,344,335,391,335,333,335,334,335,374,335,300,335,363,335,386,390,311,390,389,390,336,390,301,343,307,343,395,343,377,343,300,343,316,343,363,356,337,356,336,356,311,356,300,356,314,391,341,391,334,391,361,391,344,391,313,391,300,391,316,391,384,398,394,398,397,398,331,398,373,397,351,397,394,397,329,397,379,397,331,367,313,367,316,367,304,367,300,367,326,367,342,367,347,336,366,336,311,336,352,336,301,336,389,394,371,394,328,386,379,386,369,386,348,386,331,386,399,341,324,341,328,341,342,341,300,341,311,377,320,377,307,377,352,377,328,377,300,377,319,312,303,312,338,312,308,312,304,312,300,312,325,329,351,329,333,329,354,329,304,329,300,329,308,329,331,362,361,362,300,362,334,362,316,347,374,347,384,347,313,347,300,392,388,392,301,320,344,320,326,320,319,320,307,320,300,320,395,320,333,320,374,320,372,366,313,366,326,366,316,366,300,313,352,313,304,313,300,313,326,313,316,313,344,313,333,379,348,379,331,379,369,360,303,360,348,360,338,360,308,360,304,360,300,321,328,321,324,321,300,321,384,307,352,307,311,307,300,307,319,307,364,307,372,332,345,332,348,332,399,344,361,344,334,344,300,344,384,331,371,331,351,331,354,331,369,331,373,375,370,375,301,361,374,361,300,361,334,361,384,352,319,352,300,352,311,337,301,337,303,337,388,311,328,311,301,311,389,311,300,333,326,333,395,333,300,333,342,351,371,351,354,351,373,395,326,395,300,395,319,372,319,372,364,372,328,372,300,301,314,301,388,301,370,301,389,301,358,301,300,301,304,301,308,301,324,301,325,334,300,334,384,334,363,373,354,373,369,373,345,373,371,373,303,326,319,326,300,326,316,348,345,348,303,338,303,338,300,338,308,338,369,358,303,358,314,358,389,358,388,345,354,328,371,328,324,328,300,328,316,328,319,316,304,316,300,308,303,308,300,308,325,389,324,371,303,371,354,363,300,300,303,300,324,300,319,300,342,300,374,300,384,300,364,300,304,324,342,364,319,314,370,354,369,304,303,304,325,388,303,399,303,489,426,489,460,489,424,489,402,489,418,489,413,489,444,421,429,421,434,421,441,421,463,421,457,421,498,421,470,421,439,421,492,421,468,421,415,421,401,421,435,421,476,421,412,464,466,464,425,464,442,464,409,464,485,464,405,464,423,409,454,409,417,409,466,409,425,409,448,409,442,409,475,409,497,409,423,409,404,409,405,409,410,409,406,443,432,443,498,443,483,443,406,443,436,443,461,443,400,443,410,455,466,455,404,455,408,455,471,455,425,455,477,477,417,477,458,477,487,477,401,477,407,477,493,477,423,411,450,411,452,411,428,411,490,411,403,411,407,411,499,411,485,411,408,411,422,411,493,411,484,448,451,448,475,448,405,448,438,448,454,448,473,448,486,486,458,486,487,486,451,486,473,486,405,486,475,486,454,486,497,486,438,420,465,420,434,420,441,420,463,420,457,420,474,420,476,420,400,405,454,405,417,405,458,405,487,405,451,405,473,405,442,405,475,405,497,405,423,405,401,405,402,405,407,405,438,405,425,405,466,445,417,445,407,445,479,445,453,445,428,445,435,445,426,445,402,445,494,439,401,439,415,439,468,439,435,439,441,439,492,439,440,439,426,485,452,485,447,485,466,485,406,485,408,485,404,485,410,407,450,407,417,407,452,407,441,407,490,407,422,407,401,407,467,407,484,407,487,407,408,407,499,407,479,407,435,407,493,407,494,407,492,452,403,452,428,452,450,452,499,452,496,452,484,478,437,478,435,478,424,478,402,478,428,478,413,412,495,412,491,412,402,412,469,412,413,412,430,412,415,412,424,412,426,412,401,412,453,413,429,413,428,413,460,413,444,413,424,413,437,413,453,413,493,413,426,413,476,413,402,413,469,454,475,454,423,454,417,454,438,454,487,454,473,467,401,467,430,467,457,467,499,431,459,431,481,431,403,431,429,431,427,466,404,466,471,466,442,466,423,466,425,418,422,418,444,418,479,418,484,418,494,418,402,418,435,430,401,430,460,430,426,430,476,430,424,430,437,430,493,430,440,484,479,484,493,484,435,484,402,484,499,435,422,435,415,435,494,435,402,435,441,438,458,438,487,438,451,438,473,438,475,441,457,441,400,441,463,441,476,441,415,441,492,441,468,440,472,440,401,440,415,440,468,440,434,499,450,499,479,499,402,401,425,401,472,401,460,401,491,401,492,401,468,401,415,401,403,401,404,401,400,401,402,422,479,422,402,422,494,422,424,422,444,422,453,434,457,434,400,434,463,434,408,434,415,432,400,432,461,432,498,432,470,470,457,470,498,470,400,450,406,450,404,450,479,450,474,497,458,497,451,497,442,458,473,458,451,458,487,458,423,403,459,403,480,403,488,403,428,403,481,403,496,403,419,403,446,403,404,403,400,403,402,453,444,453,424,453,426,453,402,453,494,453,493,453,429,479,417,479,402,473,487,473,495,473,451,473,475,498,461,498,400,419,480,419,481,419,496,419,446,419,436,417,423,417,442,417,494,417,471,417,402,495,444,495,469,495,491,495,402,461,449,461,456,461,400,461,406,461,416,461,414,468,492,468,415,468,437,469,491,469,402,423,425,423,451,423,442,493,444,493,437,493,424,493,428,493,402,475,487,408,481,408,490,408,471,408,425,408,460,408,474,408,406,408,404,483,476,483,410,465,476,465,457,465,429,465,400,465,462,404,490,404,471,404,474,404,406,404,400,487,451,415,457,415,472,415,492,415,463,415,402,447,429,447,400,447,462,447,406,447,427,474,406,406,488,406,436,406,410,460,426,460,424,460,471,460,457,460,444,457,400,457,476,472,492,472,463,446,480,446,496,425,471,428,476,428,429,428,496,428,424,428,437,428,426,488,459,488,480,488,471,456,449,456,414,456,416,456,433,442,451,494,444,494,402,424,426,424,402,424,476,424,437,410,462,410,476,410,436,410,400,410,414,426,444,426,402,416,414,444,402,444,429,429,462,429,400,429,476,429,427,459,481,402,437,436,481,436,400,463,400,400,462,400,476,400,427,400,449,481,427,427,462,551,513,551,549,551,522,551,578,551,507,551,597,551,558,551,543,551,595,551,559,551,505,551,503,547,505,547,503,547,506,547,500,547,516,547,548,525,519,525,531,525,537,525,518,525,585,525,544,525,576,525,511,525,520,525,503,525,542,525,583,525,591,525,526,554,546,554,541,554,533,554,588,554,524,554,589,554,562,554,557,554,579,554,598,554,506,554,593,554,509,554,563,554,582,554,536,572,519,572,544,572,564,572,511,572,520,572,503,572,598,572,517,572,576,572,591,572,565,574,541,574,573,574,565,574,562,574,586,574,506,574,507,574,597,574,509,590,500,590,538,590,510,594,521,594,544,594,564,594,520,594,511,594,534,594,503,594,517,594,518,589,546,589,579,589,528,589,541,589,586,589,509,589,550,589,506,589,562,589,533,589,582,533,541,533,587,533,509,533,546,533,536,533,562,533,557,533,550,533,598,533,573,533,556,533,528,533,582,533,588,533,524,533,506,533,565,552,529,552,513,552,500,552,502,555,502,518,519,518,557,518,521,518,542,518,534,518,583,518,531,518,591,518,578,518,540,518,596,518,511,518,585,518,503,518,550,518,505,578,519,578,521,578,511,578,520,578,585,578,544,578,534,578,503,578,550,515,575,515,561,515,510,515,514,515,539,515,504,515,516,515,501,515,500,501,539,501,575,501,561,501,510,501,532,501,508,501,500,501,512,501,502,531,519,531,583,531,542,531,503,531,509,531,538,531,526,546,509,546,557,546,524,546,573,546,586,546,579,546,562,546,506,546,541,546,528,546,588,500,529,500,513,500,502,500,538,500,514,500,510,500,575,500,539,500,571,500,570,500,516,500,566,514,539,514,575,514,561,514,510,514,580,514,527,514,532,514,502,509,579,509,528,509,519,509,557,509,541,509,586,509,587,509,588,509,524,509,562,509,563,509,506,509,598,509,582,509,556,509,536,509,565,509,503,511,521,511,542,511,544,511,564,511,585,511,520,511,576,511,537,511,503,511,591,511,596,568,527,592,513,592,522,592,597,592,507,592,517,592,505,557,579,557,541,557,562,557,550,557,506,557,586,557,587,557,536,535,510,535,599,535,581,535,539,535,504,535,516,507,559,507,513,507,549,507,522,507,528,507,597,507,558,507,577,507,543,507,505,507,595,507,517,507,503,507,506,502,580,502,504,502,566,502,548,502,570,502,516,502,523,502,571,561,523,561,571,598,564,598,587,598,588,598,524,598,536,598,506,598,593,598,573,598,565,577,513,577,558,577,573,577,528,577,524,577,506,577,505,577,559,538,566,562,579,562,541,562,588,562,565,562,506,562,582,581,539,581,599,526,542,526,583,526,503,559,553,559,513,559,597,559,522,559,505,559,595,559,549,559,528,559,558,580,510,580,575,580,527,529,504,529,527,529,516,529,570,575,539,575,532,540,521,540,542,540,544,540,534,540,520,540,530,540,576,540,537,540,585,540,503,540,596,579,541,579,550,579,506,579,586,579,587,579,582,579,536,516,532,585,542,585,544,585,534,585,537,585,567,585,520,585,503,585,591,537,519,537,521,537,534,537,576,537,506,537,567,537,520,537,503,537,569,584,571,584,539,584,504,584,523,588,587,588,536,588,586,588,593,588,582,588,524,588,573,588,506,510,527,510,504,544,521,544,564,544,520,544,596,544,503,544,565,544,591,544,567,587,550,587,524,587,582,587,563,587,586,587,506,587,536,541,528,541,550,541,586,541,506,541,536,541,520,541,563,541,582,541,556,541,565,591,503,591,542,591,595,591,549,553,513,553,549,553,522,553,597,553,505,553,595,596,521,596,534,596,530,596,520,596,503,596,567,523,539,523,504,506,528,506,519,506,586,506,558,506,576,506,524,506,543,506,573,506,563,506,582,506,536,506,556,506,565,506,550,506,593,506,505,506,503,563,528,563,524,563,550,563,503,563,536,519,521,519,542,519,576,519,567,519,565,539,504,571,599,571,570,571,504,550,528,550,565,550,503,550,593,569,521,569,576,569,567,569,503,593,524,593,573,593,517,593,536,593,556,593,505,582,536,582,573,582,556,522,513,522,549,522,505,522,503,522,597,522,517,565,517,527,508,556,549,556,528,556,524,556,573,556,517,556,536,556,505,556,543,576,521,576,567,576,503,534,521,534,542,534,520,534,503,534,567,543,558,543,505,543,517,543,595,567,521,567,520,567,503,567,564,503,521,503,542,503,586,503,564,503,583,503,520,503,530,503,524,503,536,503,505,573,528,573,558,573,524,573,505,573,536,530,521,530,564,530,520,545,508,545,512,517,505,528,524,528,505,528,558,528,513,528,536,524,536,549,505,597,513,597,558,597,505,520,521,520,542,520,583,521,564,595,513,595,505,505,513,505,558,558,513,586,536,508,512],"bridges":[[0,5,291],[0,1,340],[0,3,250],[0,2,71],[0,4,74],[1,5,196],[1,3,3],[1,2,47],[1,4,108],[3,5,185],[3,2,126],[3,4,30],[4,5,199],[4,2,156],[5,2,221]],"sunw":[163,70,47,35,45,128],"sun":{"agent":"NANO","hex":"#b57cf5","n":88,"pr":0.0321},"V":2384,"E":17481,"Q":0.649,"date":"2026-11-14"};
+const I18N={
+  en:{title:'NANO — second brain',sub:'6 AI agents orbit the NANO core · real knowledge graph',
+    front:'Front',right:'Right',top:'Top',back:'Back',left:'Left',bottom:'Bottom',persp:'Persp',ortho:'Ortho',
+    vUser:'User',vPersp:'Perspective',vOrtho:'Orthographic',
+    outliner:'Scene',view:'View',graph:'Graph',physics:'Physics',
+    lens:'Focal length',lensN:'mm, as on a Blender camera: 18 wide · 50 normal · 135 tele',
+    topk:'Top K per agent',topkN:'each agent links to its K strongest notes by PageRank',
+    gravity:'Gravity of NANO',repel:'Repulsion',link:'Link length',
+    physN:'Newton: inverse-square repulsion, Hooke springs, viscous damping; the system cools and comes to rest',
+    play:'Simulate',pause:'Pause',bang:'Big bang',energy:'kinetic energy',
+    frame:'Frame all (Home)',turn:'Turntable',overlays:'Overlays: grid, stats',side:'Sidebar (N)',
+    notes:'notes',shown:'Linked here (top K)',prshare:'PageRank share',focus:'Focus · links that stay inside',core:'Links to NANO core',
+    bridges:'Strongest bridges',topn:'Top notes',sunDom:'core · dispatcher · services',sunAbout:'NANO routes every task to the agent that owns the domain.',
+    objects:'Objects',vertices:'Vertices',edges:'Edges',shownS:'Shown',fps:'fps',
+    hint:'Drag — orbit · Shift+drag or two fingers — pan · Wheel / pinch — zoom · Drag a planet — grab it · 1 3 7 — views · 5 — persp/ortho · Home — frame all',
+    foot:'Real graph of the vault (index of 14.11.2026). Planet size = notes in the domain; moon size = PageRank. Q = modularity of the 6 + 1 split: 0 is random, above 0.3 is clear structure. Note titles of the personal domain are not shown.',
+    eye:'Hide / show',close:'Close',cNotes:'Notes in the domain',note:'note',links:'links',sunLinks:'Links to the agents',
+    dblHint:'double-click — reset'},
+  ru:{title:'NANO — второй мозг',sub:'6 ИИ-агентов вокруг ядра NANO · настоящий граф знаний',
+    front:'Спереди',right:'Справа',top:'Сверху',back:'Сзади',left:'Слева',bottom:'Снизу',persp:'Персп',ortho:'Орто',
+    vUser:'Свободный',vPersp:'вид · перспектива',vOrtho:'вид · ортография',
+    outliner:'Сцена',view:'Вид',graph:'Граф',physics:'Физика',
+    lens:'Фокусное',lensN:'мм, как у камеры Blender: 18 широкий · 50 обычный · 135 теле',
+    topk:'Топ K на агента',topkN:'каждый агент связан со своими K сильнейшими нотами по PageRank',
+    gravity:'Гравитация NANO',repel:'Отталкивание',link:'Длина связи',
+    physN:'Ньютон: отталкивание по обратному квадрату, пружины Гука, вязкое трение; система остывает и замирает',
+    play:'Симуляция',pause:'Пауза',bang:'Большой взрыв',energy:'кинетическая энергия',
+    frame:'Показать всё (Home)',turn:'Поворотный стол',overlays:'Оверлеи: сетка, статистика',side:'Панель (N)',
+    notes:'нот',shown:'Связаны здесь (топ K)',prshare:'Доля PageRank',focus:'Фокус · связи внутри домена',core:'Связи с ядром NANO',
+    bridges:'Сильнейшие мосты',topn:'Главные ноты',sunDom:'ядро · диспетчер · службы',sunAbout:'NANO отдаёт каждую задачу агенту, который владеет доменом.',
+    objects:'Объекты',vertices:'Вершины',edges:'Рёбра',shownS:'Показано',fps:'к/с',
+    hint:'Тяни — орбита · Shift+тяни или два пальца — сдвиг · Колесо / щипок — зум · Тяни планету — схватить · 1 3 7 — виды · 5 — персп/орто · Home — всё',
+    foot:'Настоящий граф vault (индекс 14.11.2026). Размер планеты = нот в домене; размер луны = PageRank. Q — модулярность разбиения 6 + 1: 0 — случайно, выше 0,3 — явная структура. Названия нот личного домена не показываются.',
+    eye:'Скрыть / показать',close:'Закрыть',cNotes:'Нот в домене',note:'нота',links:'связей',sunLinks:'Связи с агентами',
+    dblHint:'двойной щелчок — сброс'}};
+const QS=new URLSearchParams(location.search);
+let LANG=(QS.get('lang')||(navigator.language||'en')).slice(0,2)==='ru'?'ru':'en';
+const T=k=>(I18N[LANG][k]!=null?I18N[LANG][k]:I18N.en[k]!=null?I18N.en[k]:k);
+const nf=v=>v.toLocaleString(LANG==='ru'?'ru-RU':'en-US');
+const dom=p=>LANG==='ru'?p.ru:p.en;
+
+// Физика сцены. Тело 0 — солнце NANO (неподвижно в начале координат), 1..NP — планеты-агенты, MO.. — луны (топ-ноты агентов).
+// Ньютон: попарное отталкивание по обратному квадрату с пламмеровским смягчением ε и третьим законом (массы разные);
+// пружины Гука луна–планета (длина короче у нот с большим PageRank) и луна–луна (настоящие связи vault, k ∝ 1/min(степень));
+// гравитация ядра — гармоническая яма (жёсткость ∝ связям домена с ядром), мосты планета–планета — пружины ∝ числу межцветных связей.
+// Полунеявный Эйлер с вязким трением; «температура» α остывает за ≈ 300 шагов, ползунок или захват планеты греют заново.
+const NP=DATA.planets.length, NM=DATA.moons.length, MO=1+NP, NB=MO+NM;
+const PX=new Float32Array(NB),PY=new Float32Array(NB),PZ=new Float32Array(NB),VX=new Float32Array(NB),VY=new Float32Array(NB),VZ=new Float32Array(NB);
+const FX=new Float32Array(NB),FY=new Float32Array(NB),FZ=new Float32Array(NB);
+const KIND=new Uint8Array(NB),OWN=new Int16Array(NB),RANK=new Int16Array(NB),MASS=new Float32Array(NB),QC=new Float32Array(NB),PRN=new Float32Array(NB),RW=new Float32Array(NB);
+const PSTART=new Int32Array(NP),PCOUNT=new Int32Array(NP);
+KIND[0]=0; MASS[0]=1e9; RW[0]=70;
+DATA.planets.forEach((p,i)=>{const b=1+i;KIND[b]=1;OWN[b]=b;MASS[b]=8*Math.sqrt(p.n/300);QC[b]=Math.sqrt(p.n/400);RW[b]=26+30*Math.sqrt(p.n/700)});
+for(let m=0;m<NM;m++){const b=MO+m,p=DATA.moons[m][0];KIND[b]=2;OWN[b]=1+p;MASS[b]=1;if(!PCOUNT[p])PSTART[p]=m;RANK[b]=PCOUNT[p]++}
+for(let m=0;m<NM;m++){const b=MO+m,p=DATA.moons[m][0],top=DATA.moons[PSTART[p]][1]||1;PRN[b]=DATA.moons[m][1]/top;RW[b]=4+13*PRN[b]}
+const SUNW_MAX=Math.max(...DATA.sunw,1), GW=DATA.sunw.map(w=>.7+.6*w/SUNW_MAX);
+const BMAX=Math.max(...DATA.bridges.map(b=>b[2]),1);
+// константы подобраны под мир ≈ 1 600 единиц: планеты ≈ 520 от ядра, облако лун ≈ 150–220
+const S_PP=4.2e6, S_PM=3e5, S_SM=3e5, S_MM=1500, K_G=.05, K_B=.02, K_S=.12, L0=60, L1=110, K_E=.15, L_E=50, EPS2=144, VMAX=60;
+const A_DECAY=1-Math.pow(.001,1/300), A_MIN=.002;
+const P={gravity:1,repel:1,link:1,K:75,damp:.38};
+const VIS=new Uint8Array(NP).fill(1);
+let ACT=new Int32Array(0), ON=new Uint8Array(NB), EA=new Int32Array(0), EK=new Float32Array(0), BR=[];
+let alpha=1, aTarget=0, grab=-1, simOn=true, KE=0, steps=0;
+const SEEN=new Uint8Array(NB);
+let seed=15112026; const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
+function rball(r){let x,y,z;do{x=rnd()*2-1;y=rnd()*2-1;z=rnd()*2-1}while(x*x+y*y+z*z>1);return[x*r,y*r,z*r]}
+// начальная раскладка: вершины октаэдра (4 на экваторе, BUBBLEGUM — северный полюс, CFO — южный), чуть наклонены
+const OCTA=[[1,0,0],[0,1,0],[-1,0,0],[0,-1,0],[0,0,-1],[0,0,1]];
+function place(b){const p=OWN[b];const o=rball(34);PX[b]=PX[p]+o[0];PY[b]=PY[p]+o[1];PZ[b]=PZ[p]+o[2];VX[b]=VY[b]=VZ[b]=0;SEEN[b]=1}
+function bang(){seed=15112026;
+  for(let i=0;i<NP;i++){const b=1+i,d=OCTA[i%6],j=rball(.12);PX[b]=(d[0]+j[0])*470;PY[b]=(d[1]+j[1])*470;PZ[b]=(d[2]+j[2])*470;VX[b]=VY[b]=VZ[b]=0}
+  SEEN.fill(0); for(let m=0;m<NM;m++)place(MO+m); alpha=1; steps=0}
+function activate(){
+  const a=[]; for(let i=0;i<NP;i++)if(VIS[i])a.push(1+i);
+  for(let m=0;m<NM;m++){const b=MO+m;if(VIS[OWN[b]-1]&&RANK[b]<P.K){a.push(b);if(!SEEN[b])place(b)}}
+  ACT=Int32Array.from(a); ON=new Uint8Array(NB); for(const b of a)ON[b]=1;
+  const deg=new Float32Array(NB),e=[];
+  for(let j=0;j<DATA.edges.length;j+=2){const x=MO+DATA.edges[j],y=MO+DATA.edges[j+1];if(ON[x]&&ON[y]){e.push(x,y);deg[x]++;deg[y]++}}
+  EA=Int32Array.from(e); EK=new Float32Array(e.length/2); for(let j=0;j<e.length;j+=2)EK[j>>1]=K_E/Math.min(deg[e[j]],deg[e[j+1]]);
+  BR=DATA.bridges.filter(b=>ON[1+b[0]]&&ON[1+b[1]]);
+}
+function heat(a){alpha=Math.max(alpha,a)}
+function step(){
+  alpha+=(aTarget-alpha)*A_DECAY;
+  const n=ACT.length, rp=P.repel, L=P.link;
+  FX.fill(0);FY.fill(0);FZ.fill(0);
+  for(let ii=0;ii<n;ii++){const i=ACT[ii],ki=KIND[i],xi=PX[i],yi=PY[i],zi=PZ[i];
+    for(let jj=ii+1;jj<n;jj++){const j=ACT[jj];let s;
+      if(ki===2){if(KIND[j]===2)s=S_MM;else{if(OWN[i]===j)continue;s=S_PM*QC[j]}}
+      else if(KIND[j]===2){if(OWN[j]===i)continue;s=S_PM*QC[i]}
+      else s=S_PP*QC[i]*QC[j];
+      const dx=xi-PX[j],dy=yi-PY[j],dz=zi-PZ[j],d2=dx*dx+dy*dy+dz*dz+EPS2,f=s*rp/(d2*Math.sqrt(d2));
+      FX[i]+=dx*f;FY[i]+=dy*f;FZ[i]+=dz*f;FX[j]-=dx*f;FY[j]-=dy*f;FZ[j]-=dz*f}}
+  const kg=K_G*P.gravity;
+  for(let ii=0;ii<n;ii++){const i=ACT[ii];
+    if(KIND[i]===1){const k=kg*GW[i-1];FX[i]-=k*PX[i];FY[i]-=k*PY[i];FZ[i]-=k*PZ[i]}
+    else{const d2=PX[i]*PX[i]+PY[i]*PY[i]+PZ[i]*PZ[i]+EPS2,f=S_SM*rp/(d2*Math.sqrt(d2));FX[i]+=PX[i]*f;FY[i]+=PY[i]*f;FZ[i]+=PZ[i]*f;
+      const p=OWN[i],dx=PX[p]-PX[i],dy=PY[p]-PY[i],dz=PZ[p]-PZ[i],d=Math.sqrt(dx*dx+dy*dy+dz*dz)||1e-3,k=K_S*(d-L*(L0+L1*(1-PRN[i])))/d;
+      FX[i]+=dx*k;FY[i]+=dy*k;FZ[i]+=dz*k;FX[p]-=dx*k;FY[p]-=dy*k;FZ[p]-=dz*k}}
+  for(let e=0;e<EA.length;e+=2){const a=EA[e],b=EA[e+1],dx=PX[b]-PX[a],dy=PY[b]-PY[a],dz=PZ[b]-PZ[a],d=Math.sqrt(dx*dx+dy*dy+dz*dz)||1e-3,k=EK[e>>1]*(d-L*L_E)/d;
+    FX[a]+=dx*k;FY[a]+=dy*k;FZ[a]+=dz*k;FX[b]-=dx*k;FY[b]-=dy*k;FZ[b]-=dz*k}
+  for(const br of BR){const a=1+br[0],b=1+br[1],k=K_B*br[2]/BMAX,dx=PX[b]-PX[a],dy=PY[b]-PY[a],dz=PZ[b]-PZ[a];
+    FX[a]+=dx*k;FY[a]+=dy*k;FZ[a]+=dz*k;FX[b]-=dx*k;FY[b]-=dy*k;FZ[b]-=dz*k}
+  let ke=0; const dm=1-P.damp;
+  for(let ii=0;ii<n;ii++){const i=ACT[ii];
+    if(i===grab){VX[i]=VY[i]=VZ[i]=0;continue}
+    const q=alpha/MASS[i];let vx=(VX[i]+FX[i]*q)*dm,vy=(VY[i]+FY[i]*q)*dm,vz=(VZ[i]+FZ[i]*q)*dm;
+    const v2=vx*vx+vy*vy+vz*vz; if(v2>VMAX*VMAX){const c=VMAX/Math.sqrt(v2);vx*=c;vy*=c;vz*=c}
+    VX[i]=vx;VY[i]=vy;VZ[i]=vz;PX[i]+=vx;PY[i]+=vy;PZ[i]+=vz;ke+=.5*MASS[i]*(vx*vx+vy*vy+vz*vz)}
+  KE=ke; steps++;
+}
+const simAwake=()=>simOn&&(alpha>A_MIN||grab>=0);
+
+// Вид — камера-орбита как в Blender: Z вверх, виды 1·3·7 (Ctrl — обратные), персп/орто, фокусное в мм на сенсоре 36 мм.
+// Отрисовка Canvas 2D: звёздная сфера и туманность на бесконечности (параллакс при орбите), сетка-пол, тракты ядро→агент
+// и агент↔агент, спицы агент→луна, настоящие связи лун, тела по глубине (дальние первыми), подписи DOM без наездов.
+const cv=document.getElementById('gl'), g2=cv.getContext('2d');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rgb=h=>{h=h.replace('#','');if(h.length===3)h=h.replace(/./g,'$&$&');const n=parseInt(h,16);return[n>>16&255,n>>8&255,n&255]};
+const mixc=(a,b,t)=>a.map((v,i)=>Math.round(v+(b[i]-v)*t));
+const css=(c,a)=>`rgba(${c[0]},${c[1]},${c[2]},${a==null?1:a})`;
+const WHITE=[255,255,255], INK=[8,4,30];
+const PHEX=DATA.planets.map(p=>p.hex), PRGB=PHEX.map(rgb), SHEX=DATA.sun.hex, SRGB=rgb(SHEX), SEL_C='#ffa64d';
+
+// ---------- камера ----------
+const cam={yaw:-.62,pitch:.36,dist:3600,tx:0,ty:0,tz:0,lens:50,ox:0,oy:0}, goal={...cam};
+let ortho=false, named='', autoOrtho=false, sel=-1, hov=-1, follow=-1, OVL=QS.get('ovl')!=='0';
+let VW=1,VH=1,DPR=1,CXs=0,CYs=0,HDR=52,tX=.36,tY=.2,sc0=1;
+const vR=[1,0,0],vU=[0,0,1],vF=[0,1,0],vE=[0,0,0], NEAR=20;
+const VIEWS={front:[0,0],back:[Math.PI,0],right:[Math.PI/2,0],left:[-Math.PI/2,0],top:[0,Math.PI/2],bottom:[0,-Math.PI/2]};
+const wrapPI=a=>a-2*Math.PI*Math.floor((a+Math.PI)/(2*Math.PI));
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+function tans(lens){const t=18/lens;return VW>=VH?[t,t*VH/VW]:[t*VW/VH,t]}
+function basis(){
+  const cy=Math.cos(cam.yaw),sy=Math.sin(cam.yaw),cp=Math.cos(cam.pitch),sp=Math.sin(cam.pitch);
+  vF[0]=-sy*cp; vF[1]=cy*cp; vF[2]=-sp; vR[0]=cy; vR[1]=sy; vR[2]=0;
+  vU[0]=-sy*sp; vU[1]=cy*sp; vU[2]=cp;
+  vE[0]=cam.tx-vF[0]*cam.dist; vE[1]=cam.ty-vF[1]*cam.dist; vE[2]=cam.tz-vF[2]*cam.dist;
+  [tX,tY]=tans(cam.lens); sc0=(VH/2)/(cam.dist*tY);
+  CXs=(VW-cam.ox)/2; CYs=(VH+HDR*.8)/2-cam.oy;
+}
+const sideOff=()=>document.body.classList.contains('noside')||VW<=760?0:316;
+// телефон: нижний лист N или карточка закрывают низ — кадр живёт в полосе над ними
+function botOff(){if(VW>760)return 0;
+  if(!document.body.classList.contains('noside'))return document.getElementById('side').offsetHeight+8;
+  const c=document.getElementById('card');return c&&!c.hidden?c.offsetHeight+8:0}
+function layOff(){goal.ox=sideOff();goal.oy=botOff()/2}
+function fitDist(r,lens){const [tx,ty]=tans(lens||goal.lens),ox=sideOff();
+  const txe=tx*(VW-ox-40)/VW, tye=ty*(VH-HDR-60)/VH;return r*Math.sqrt(1+1/Math.min(txe,tye)**2)}
+// кадрирование по границам, не зависящим от поворота вокруг Z (поворотный стол не выводит сцену за край):
+// по горизонтали — радиус в плоскости XY, по вертикали — проекция при текущем наклоне; глубина к камере — запас
+function fitBox(bs,cx,cy,cz,k){
+  const cp=Math.abs(Math.cos(goal.pitch)),sp=Math.abs(Math.sin(goal.pitch));let ax=120,ay=120,zn=0;
+  for(const b of bs){const dx=PX[b]-cx,dy=PY[b]-cy,dz=PZ[b]-cz,h=Math.hypot(dx,dy),r=RW[b]*1.6;
+    ax=Math.max(ax,h+r);ay=Math.max(ay,Math.abs(dz)*cp+h*sp+r);zn=Math.max(zn,Math.hypot(h,dz)+r)}
+  const [tx,ty]=tans(goal.lens),ox=sideOff(),txe=tx*(VW-ox-40)/VW,tye=ty*Math.max(140,VH-HDR-70-botOff())/VH;
+  return (Math.max(ax/txe,ay/tye)+zn*.55)*(k||1)}
+function frameAll(){follow=-1;goal.tx=goal.ty=goal.tz=0;layOff();goal.dist=fitBox([0,...ACT],0,0,0)}
+function frameBody(b){
+  if(b<=0){frameAll();return}
+  follow=b;layOff();goal.dist=fitBox(ACT.filter(m=>OWN[m]===b),PX[b],PY[b],PZ[b],1.35)}
+function setView(name,now){const v=VIEWS[name];if(!v)return;
+  goal.yaw=cam.yaw+wrapPI(v[0]-cam.yaw);goal.pitch=v[1];named=name;
+  if(!ortho){ortho=true;autoOrtho=true}
+  if(now){cam.yaw=goal.yaw;cam.pitch=goal.pitch}}
+function leaveNamed(){if(!named)return;named='';if(autoOrtho){ortho=false;autoOrtho=false}}
+function orbit(dx,dy){leaveNamed();goal.yaw-=dx*.0065;goal.pitch=clamp(goal.pitch+dy*.0065,-Math.PI/2,Math.PI/2)}
+function pan(dx,dy){follow=-1;const w=1/sc0;
+  for(let i=0;i<3;i++){const d=(-vR[i]*dx+vU[i]*dy)*w;goal[['tx','ty','tz'][i]]+=d;cam[['tx','ty','tz'][i]]+=d}}
+function zoom(f){goal.dist=clamp(goal.dist*f,250,16000)}
+function toWorld(sx,sy,d){const s=ortho?sc0:(VH/2)/(d*tY),xv=(sx-CXs)/s,yv=(CYs-sy)/s;
+  return[vE[0]+vR[0]*xv+vU[0]*yv+vF[0]*d,vE[1]+vR[1]*xv+vU[1]*yv+vF[1]*d,vE[2]+vR[2]*xv+vU[2]*yv+vF[2]*d]}
+function smooth(dt){const k=1-Math.exp(-dt*14);
+  if(follow>0){goal.tx=PX[follow];goal.ty=PY[follow];goal.tz=PZ[follow]}
+  for(const q of ['yaw','pitch','dist','tx','ty','tz','lens','ox','oy'])cam[q]+=(goal[q]-cam[q])*k}
+
+// ---------- проекция тел ----------
+const SX=new Float32Array(NB),SY=new Float32Array(NB),SD=new Float32Array(NB),SR=new Float32Array(NB),SA=new Float32Array(NB),SVIS=new Uint8Array(NB);
+const fog=d=>clamp(1.2-.55*(d-cam.dist)/800,.3,1);
+function projOne(b){
+  const dx=PX[b]-vE[0],dy=PY[b]-vE[1],dz=PZ[b]-vE[2],d=dx*vF[0]+dy*vF[1]+dz*vF[2];
+  SD[b]=d;SVIS[b]=0;if(!ortho&&d<NEAR)return;
+  const s=ortho?sc0:(VH/2)/(d*tY),x=CXs+(dx*vR[0]+dy*vR[1]+dz*vR[2])*s,y=CYs-(dx*vU[0]+dy*vU[1]+dz*vU[2])*s,r=Math.max(KIND[b]===2?1.1:3,RW[b]*s);
+  if(x<-r*7||y<-r*7||x>VW+r*7||y>VH+r*7)return;
+  SX[b]=x;SY[b]=y;SR[b]=r;SA[b]=fog(d);SVIS[b]=1}
+function projectAll(){projOne(0);for(const b of ACT)projOne(b)}
+// фокус: выбран агент — остальные домены приглушены; выбрано ядро — всё ярко
+const dimOf=b=>sel>0&&b!==0&&OWN[b]!==sel?.24:1;
+const dimT=(a,b)=>sel>0&&a!==sel&&b!==sel?.22:1;
+
+// ---------- спрайты ----------
+function sprite(n,fn){const c=document.createElement('canvas');c.width=c.height=n;fn(c.getContext('2d'),n);return c}
+function glowS(c,core){return sprite(64,(g,n)=>{const m=n/2,r=g.createRadialGradient(m,m,0,m,m,m);
+  r.addColorStop(0,css(core?WHITE:mixc(c,WHITE,.7)));r.addColorStop(.13,css(mixc(c,WHITE,.45),.95));r.addColorStop(.3,css(c,.45));
+  r.addColorStop(.6,css(c,.1));r.addColorStop(1,css(c,0));g.fillStyle=r;g.fillRect(0,0,n,n)})}
+function ballS(c){return sprite(192,(g,n)=>{const m=n/2;
+  const r=g.createRadialGradient(m*.7,m*.6,m*.03,m,m,m);
+  r.addColorStop(0,css(mixc(c,WHITE,.8)));r.addColorStop(.28,css(mixc(c,WHITE,.2)));r.addColorStop(.72,css(mixc(c,INK,.42)));r.addColorStop(1,css(mixc(c,INK,.8)));
+  g.fillStyle=r;g.beginPath();g.arc(m,m,m-1,0,7);g.fill();
+  const e=g.createRadialGradient(m,m,m*.8,m,m,m);e.addColorStop(0,css(c,0));e.addColorStop(1,css(mixc(c,WHITE,.45),.6));
+  g.fillStyle=e;g.beginPath();g.arc(m,m,m-1,0,7);g.fill()})}
+function nebS(c){return sprite(256,(g,n)=>{const m=n/2,r=g.createRadialGradient(m,m,0,m,m,m);
+  r.addColorStop(0,css(c,.55));r.addColorStop(.35,css(c,.26));r.addColorStop(.7,css(c,.06));r.addColorStop(1,css(c,0));g.fillStyle=r;g.fillRect(0,0,n,n)})}
+const GLOW=PRGB.map(c=>glowS(c)), HALO=PRGB.map(c=>glowS(c,1)), BALL=PRGB.map(ballS), SUNG=glowS(SRGB,1), SUNB=ballS(SRGB);
+let BG=null;
+function mkBG(){BG=sprite(2,()=>{});BG.width=Math.max(2,VW*DPR|0);BG.height=Math.max(2,VH*DPR|0);
+  const g=BG.getContext('2d'),w=BG.width,h=BG.height,r=g.createRadialGradient(w*.5,h*.55,0,w*.5,h*.55,Math.hypot(w,h)*.62);
+  r.addColorStop(0,'#120b3a');r.addColorStop(.55,'#08051f');r.addColorStop(1,'#030212');g.fillStyle=r;g.fillRect(0,0,w,h)}
+
+// ---------- небо: звёзды и туманность на бесконечности ----------
+const STARS=[];{let s=777;const r=()=>(s=(Math.imul(s,1103515245)+12345)>>>0)/4294967296;
+  for(let i=0;i<1600;i++){const u=r()*2-1,a=r()*6.2832,q=Math.sqrt(1-u*u);
+    STARS.push([q*Math.cos(a),q*Math.sin(a),u,.6+1.5*r()**3,.22+.7*r(),.5+2*r(),r()*6.28,(r()*3)|0])}}
+const TINT=['#ffffff','#dccbff','#bcd0ff'];
+const NEB=[[.55,.75,.36,[123,85,232],1],[-.8,-.25,.1,[181,124,245],.9],[.1,-.6,-.75,[63,58,214],1.15],[-.3,.4,.85,[255,122,217],.5],[.9,-.2,-.35,[79,140,255],.6],[-.2,-.9,.3,[155,123,255],.8]]
+  .map(n=>{const l=Math.hypot(n[0],n[1],n[2]);return{d:[n[0]/l,n[1]/l,n[2]/l],spr:nebS(n[3]),k:n[4]}});
+function sky(t){
+  const ts=.85,tsx=VW>=VH?ts:ts*VW/VH,tsy=VW>=VH?ts*VH/VW:ts,hx=VW/2/tsx,hy=VH/2/tsy;
+  g2.globalCompositeOperation='lighter';
+  for(const n of NEB){const d=n.d,z=d[0]*vF[0]+d[1]*vF[1]+d[2]*vF[2];if(z<.1)continue;
+    const x=VW/2+(d[0]*vR[0]+d[1]*vR[1]+d[2]*vR[2])/z*hx,y=VH/2-(d[0]*vU[0]+d[1]*vU[1]+d[2]*vU[2])/z*hy,S=n.k*1.3*Math.max(VW,VH);
+    g2.globalAlpha=.24*Math.min(1,(z-.1)*2.5);g2.drawImage(n.spr,x-S/2,y-S/2,S,S)}
+  for(let k=0;k<3;k++){g2.fillStyle=TINT[k];
+    for(const s of STARS){if(s[7]!==k)continue;const z=s[0]*vF[0]+s[1]*vF[1]+s[2]*vF[2];if(z<.06)continue;
+      const x=VW/2+(s[0]*vR[0]+s[1]*vR[1]+s[2]*vR[2])/z*hx,y=VH/2-(s[0]*vU[0]+s[1]*vU[1]+s[2]*vU[2])/z*hy;
+      if(x<0||y<0||x>VW||y>VH)continue;
+      g2.globalAlpha=s[4]*(RM?1:.7+.3*Math.sin(t*s[5]+s[6]));const m=s[3];g2.fillRect(x-m/2,y-m/2,m,m)}}
+  g2.globalAlpha=1;g2.globalCompositeOperation='source-over'}
+
+// ---------- сетка (оверлей) ----------
+const VA=[0,0,0],VB=[0,0,0];
+function toView(x,y,z,o){const dx=x-vE[0],dy=y-vE[1],dz=z-vE[2];o[0]=dx*vR[0]+dy*vR[1]+dz*vR[2];o[1]=dx*vU[0]+dy*vU[1]+dz*vU[2];o[2]=dx*vF[0]+dy*vF[1]+dz*vF[2]}
+function seg3(path,ax,ay,az,bx,by,bz){toView(ax,ay,az,VA);toView(bx,by,bz,VB);
+  if(!ortho){if(VA[2]<NEAR&&VB[2]<NEAR)return;
+    if(VA[2]<NEAR){const t=(NEAR-VA[2])/(VB[2]-VA[2]);for(let i=0;i<3;i++)VA[i]+=(VB[i]-VA[i])*t}
+    else if(VB[2]<NEAR){const t=(NEAR-VB[2])/(VA[2]-VB[2]);for(let i=0;i<3;i++)VB[i]+=(VA[i]-VB[i])*t}}
+  const sa=ortho?sc0:(VH/2)/(VA[2]*tY),sb=ortho?sc0:(VH/2)/(VB[2]*tY);
+  path.moveTo(CXs+VA[0]*sa,CYs-VA[1]*sa);path.lineTo(CXs+VB[0]*sb,CYs-VB[1]*sb)}
+const AXC={x:'rgba(255,51,82,.5)',y:'rgba(139,220,0,.45)',z:'rgba(40,144,255,.5)'};
+function grid(){
+  g2.lineWidth=1;const G=1800,S=200;
+  if(ortho&&named){// вид по оси — сетка в плоскости экрана, как в Blender
+    const st=S*sc0;if(st<5)return;toView(0,0,0,VA);const ox=CXs+VA[0]*sc0,oy=CYs-VA[1]*sc0,p=new Path2D();
+    for(let x=ox%st;x<VW;x+=st){p.moveTo(x,0);p.lineTo(x,VH)}for(let y=oy%st;y<VH;y+=st){p.moveTo(0,y);p.lineTo(VW,y)}
+    g2.strokeStyle='rgba(181,124,245,.07)';g2.stroke(p);
+    const hz=named==='right'||named==='left'?'y':'x',vt=named==='top'||named==='bottom'?'y':'z';
+    g2.strokeStyle=AXC[hz];g2.beginPath();g2.moveTo(0,oy);g2.lineTo(VW,oy);g2.stroke();
+    g2.strokeStyle=AXC[vt];g2.beginPath();g2.moveTo(ox,0);g2.lineTo(ox,VH);g2.stroke();return}
+  const p=new Path2D();for(let k=-G;k<=G;k+=S){if(k){seg3(p,k,-G,0,k,G,0);seg3(p,-G,k,0,G,k,0)}}
+  g2.strokeStyle='rgba(181,124,245,.075)';g2.stroke(p);
+  const px=new Path2D();seg3(px,-G,0,0,G,0,0);g2.strokeStyle=AXC.x;g2.stroke(px);
+  const py=new Path2D();seg3(py,0,-G,0,0,G,0);g2.strokeStyle=AXC.y;g2.stroke(py)}
+
+// ---------- тракты и связи ----------
+const zoomK=()=>clamp(sc0*1.45,.55,1.9);
+function tract(a,b,ca,cb,w,al){const gr=g2.createLinearGradient(SX[a],SY[a],SX[b],SY[b]);
+  gr.addColorStop(0,css(ca));gr.addColorStop(1,css(cb));g2.strokeStyle=gr;
+  g2.beginPath();g2.moveTo(SX[a],SY[a]);g2.lineTo(SX[b],SY[b]);
+  g2.globalAlpha=al*.3;g2.lineWidth=w*3;g2.stroke();g2.globalAlpha=al;g2.lineWidth=w;g2.stroke()}
+function tracts(){
+  const z=zoomK();g2.globalCompositeOperation='lighter';g2.lineCap='round';
+  for(let i=0;i<NP;i++){const b=1+i;if(!ON[b]||!SVIS[b]||!SVIS[0])continue;
+    tract(0,b,SRGB,PRGB[i],(1+4*DATA.sunw[i]/SUNW_MAX)*z,.32*dimT(0,b))}
+  for(const br of BR){const a=1+br[0],b=1+br[1];if(!SVIS[a]||!SVIS[b])continue;
+    tract(a,b,PRGB[br[0]],PRGB[br[1]],(.6+4.4*br[2]/BMAX)*z,.38*dimT(a,b))}
+  g2.globalAlpha=1;g2.globalCompositeOperation='source-over'}
+function links(){
+  const sp=PRGB.map(()=>new Path2D()),ed=PRGB.map(()=>new Path2D());
+  for(const b of ACT){if(KIND[b]!==2||!SVIS[b])continue;const p=OWN[b];if(!SVIS[p])continue;sp[p-1].moveTo(SX[p],SY[p]);sp[p-1].lineTo(SX[b],SY[b])}
+  for(let e=0;e<EA.length;e+=2){const a=EA[e],b=EA[e+1];if(!SVIS[a]||!SVIS[b])continue;const q=ed[OWN[a]-1];q.moveTo(SX[a],SY[a]);q.lineTo(SX[b],SY[b])}
+  g2.globalCompositeOperation='lighter';g2.lineWidth=1;
+  for(let i=0;i<NP;i++){if(!ON[1+i])continue;const d=dimOf(1+i),f=sel===1+i?1.9:1;g2.strokeStyle=PHEX[i];
+    g2.globalAlpha=.07*d*f;g2.stroke(sp[i]);g2.globalAlpha=.2*d*f;g2.stroke(ed[i])}
+  g2.globalAlpha=1;g2.globalCompositeOperation='source-over'}
+
+// ---------- тела ----------
+const ORD=[];
+function ring(b,c,w){if(b<0||!SVIS[b])return;g2.strokeStyle=c;g2.lineWidth=w;g2.beginPath();g2.arc(SX[b],SY[b],SR[b]+(KIND[b]===2?3:5),0,7);g2.stroke()}
+function bodies(t){
+  ORD.length=0;if(SVIS[0])ORD.push(0);for(const b of ACT)if(SVIS[b])ORD.push(b);
+  ORD.sort((a,b)=>SD[b]-SD[a]);
+  for(const b of ORD){const k=KIND[b],r=SR[b],x=SX[b],y=SY[b],a=SA[b]*dimOf(b);
+    g2.globalCompositeOperation='lighter';
+    if(k===2){const S=r*5.4;g2.globalAlpha=Math.min(1,.95*a);g2.drawImage(GLOW[OWN[b]-1],x-S/2,y-S/2,S,S);continue}
+    const sun=k===0,pul=sun&&!RM?1+.05*Math.sin(t*1.5):1,S=r*(sun?7:4.4)*pul;
+    g2.globalAlpha=(sun?.9:.62)*a;g2.drawImage(sun?SUNG:HALO[b-1],x-S/2,y-S/2,S,S);
+    g2.globalCompositeOperation='source-over';g2.globalAlpha=Math.max(.3,a);g2.drawImage(sun?SUNB:BALL[b-1],x-r,y-r,2*r,2*r)}
+  g2.globalAlpha=1;g2.globalCompositeOperation='source-over';
+  ring(sel,SEL_C,2);if(hov>=0&&hov!==sel)ring(hov,'rgba(255,255,255,.75)',1.2)}
+function draw(t){
+  g2.setTransform(DPR,0,0,DPR,0,0);g2.globalAlpha=1;g2.globalCompositeOperation='source-over';
+  g2.drawImage(BG,0,0,VW,VH);sky(t);projectAll();if(OVL)grid();tracts();links();bodies(t)}
+function pick(mx,my){let best=-1,bd=1e12;
+  const test=b=>{if(!SVIS[b])return;const dx=mx-SX[b],dy=my-SY[b],m=KIND[b]===2,rr=Math.max(SR[b]+(m?3:5),m?7:14);
+    if(dx*dx+dy*dy<=rr*rr&&SD[b]<bd){bd=SD[b];best=b}};
+  test(0);for(const b of ACT)test(b);return best}
+
+// ---------- подписи: агенты и ядро всегда, луны — главные концепты, жадно без наездов ----------
+const LABS=document.getElementById('labs'),PL=[],ML=[];
+for(let b=0;b<=NP;b++){const e=document.createElement('div');e.className='lb'+(b===0?' sun':'');
+  e.style.setProperty('--c',b===0?SHEX:PHEX[b-1]);e.innerHTML='<b></b><small></small>';e.style.display='none';LABS.appendChild(e);PL.push(e)}
+function labTexts(){PL.forEach((e,b)=>{e.firstChild.textContent=b===0?'NANO':DATA.planets[b-1].agent;
+  e.lastChild.textContent=b===0?T('sunDom'):dom(DATA.planets[b-1])})}
+const BOX=[],LBOX=[],PORD=[];
+const hitIn=(L,x,y,w,h)=>{for(const q of L)if(x<q[0]+q[2]&&x+w>q[0]&&y<q[1]+q[3]&&y+h>q[1])return true;return false};
+const hit=(x,y,w,h)=>hitIn(BOX,x,y,w,h);
+const MEAS=document.createElement('canvas').getContext('2d'),MW=new Map();
+function textW(t){let w=MW.get(t);if(w==null){MEAS.font='11px Inter,system-ui,sans-serif';w=MEAS.measureText(t).width+6;MW.set(t,w)}return w}
+const hideEl=e=>{if(e.style.display!=='none')e.style.display='none'};
+function labels(){
+  BOX.length=LBOX.length=PORD.length=0;const lim=VW-cam.ox;
+  for(let b=0;b<=NP;b++){if((b===0||ON[b])&&SVIS[b])PORD.push(b);else hideEl(PL[b])}
+  // ближние первыми, выбранный — вне очереди; дальняя подпись, накрытая ближней, прячется (виды по оси)
+  PORD.sort((a,b)=>(a===sel?-1e9:SD[a])-(b===sel?-1e9:SD[b]));
+  for(const b of PORD){const e=PL[b];
+    if(e.style.display==='none')e.style.display='';
+    const x=SX[b],y=SY[b]+SR[b]+(b===0?10:6),w=e._w||(e._w=e.offsetWidth||90),h=e._h||(e._h=e.offsetHeight||34);
+    if(hitIn(LBOX,x-w/2,y,w,h)){hideEl(e);continue}
+    e.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translateX(-50%)`;
+    e.style.opacity=Math.max(.35,SA[b]*dimOf(b)).toFixed(2);e.classList.toggle('sel',b===sel);
+    LBOX.push([x-w/2,y,w,h]);BOX.push([x-w/2,y,w,h],[SX[b]-SR[b],SY[b]-SR[b],2*SR[b],2*SR[b]])}
+  let used=0;const small=VW<=760;
+  for(let i=0;i<NP;i++){const p=1+i;if(!ON[p]||!SVIS[p])continue;
+    const want=sel===p?(small?7:12):sel>0?0:(small?1:3);let got=0;
+    for(let r=0;r<P.K&&got<want;r++){const m=PSTART[i]+r,b=MO+m;if(m>=NM||DATA.moons[m][0]!==i)break;
+      const li=DATA.moons[m][3];if(li<0||!ON[b]||!SVIS[b])continue;
+      const txt=DATA.labels[li],w=textW(txt),x=SX[b]+SR[b]+4,y=SY[b]-8;
+      if(x+w>lim-6||x<4||y<HDR+4||y>VH-24||hit(x,y,w,16))continue;
+      BOX.push([x,y,w,16]);got++;
+      let e=ML[used];if(!e){e=document.createElement('div');e.className='ml';LABS.appendChild(e);ML.push(e)}
+      if(e._t!==txt){e.textContent=txt;e._t=txt}
+      e.style.display='';e.style.transform=`translate(${x.toFixed(1)}px,${y.toFixed(1)}px)`;e.style.opacity=SA[b].toFixed(2);used++}}
+  for(let i=used;i<ML.length;i++)if(ML[i].style.display!=='none')ML[i].style.display='none'}
+
+// ---------- гизмо навигации (оси X·Y·Z цветами Blender) ----------
+const gz=document.getElementById('gz'),gg=gz.getContext('2d');
+const AX=[['X',[1,0,0],'#ff3352','right'],['Y',[0,1,0],'#8bdc00','back'],['Z',[0,0,1],'#2890ff','top'],
+  ['-X',[-1,0,0],'#ff3352','left'],['-Y',[0,-1,0],'#8bdc00','front'],['-Z',[0,0,-1],'#2890ff','bottom']];
+let gzHov=-1;const GZP=[];
+function gizmo(){
+  const n=gz.clientWidth||96,d=Math.min(2,DPR);if(gz.width!==Math.round(n*d)){gz.width=gz.height=Math.round(n*d)}
+  gg.setTransform(d,0,0,d,0,0);gg.clearRect(0,0,n,n);
+  const c=n/2,rr=n*.35,br=n*.1;
+  const it=AX.map((a,i)=>{const v=a[1];return{i,x:c+(v[0]*vR[0]+v[1]*vR[1]+v[2]*vR[2])*rr,y:c-(v[0]*vU[0]+v[1]*vU[1]+v[2]*vU[2])*rr,z:v[0]*vF[0]+v[1]*vF[1]+v[2]*vF[2]}});
+  it.sort((p,q)=>q.z-p.z);
+  for(const p of it){const a=AX[p.i],pos=p.i<3,c2=rgb(a[2]);
+    if(pos){gg.strokeStyle=a[2];gg.lineWidth=2;gg.beginPath();gg.moveTo(c,c);gg.lineTo(p.x,p.y);gg.stroke()}
+    gg.beginPath();gg.arc(p.x,p.y,br,0,7);
+    if(pos){gg.fillStyle=a[2];gg.fill()}else{gg.fillStyle=css(c2,.25);gg.fill();gg.strokeStyle=css(c2,.75);gg.lineWidth=1.2;gg.stroke()}
+    if(gzHov===p.i){gg.strokeStyle='#fff';gg.lineWidth=1.6;gg.stroke()}
+    if(pos||gzHov===p.i){gg.fillStyle=pos?'#0b0820':'#fff';gg.font=`700 ${Math.round(n*.11)}px Inter,system-ui,sans-serif`;
+      gg.textAlign='center';gg.textBaseline='middle';gg.fillText(a[0].replace('-',''),p.x,p.y+.5)}
+    GZP[p.i]=[p.x,p.y,br]}}
+function gzPick(x,y){let best=-1,bz=-9;for(let i=0;i<6;i++){const q=GZP[i];if(!q)continue;
+  const dx=x-q[0],dy=y-q[1];if(dx*dx+dy*dy<=(q[2]+2)**2){const v=AX[i][1],z=-(v[0]*vF[0]+v[1]*vF[1]+v[2]*vF[2]);if(z>bz){bz=z;best=i}}}return best}
+
+function resize(){
+  VW=innerWidth;VH=innerHeight;DPR=Math.min(2,devicePixelRatio||1);HDR=VW<=760?92:52;
+  cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);mkBG();PL.forEach(e=>{e._w=e._h=0})}
+
+// UI — заголовок и виды, outliner с «глазом», панель N (Вид · Граф · Физика) ползунками-полями Blender, карточка
+// выбранного, подсказка при наведении; ввод мышью и тачем (орбита · сдвиг · зум · захват планеты); цикл кадра.
+const $=id=>document.getElementById(id), BODY=document.body;
+const EYE_ON='<svg viewBox="0 0 20 20"><path d="M1.8 10S5 4.6 10 4.6 18.2 10 18.2 10 15 15.4 10 15.4 1.8 10 1.8 10Z"/><circle cx="10" cy="10" r="2.6"/></svg>';
+const EYE_OFF='<svg viewBox="0 0 20 20"><path d="M3 3l14 14M8 4.9A8 8 0 0 1 10 4.6c5 0 8.2 5.4 8.2 5.4a14 14 0 0 1-2.4 3M5.2 6.5A14 14 0 0 0 1.8 10S5 15.4 10 15.4c1.4 0 2.7-.4 3.8-1"/></svg>';
+const pct=v=>(v*100).toLocaleString(LANG==='ru'?'ru-RU':'en-US',{maximumFractionDigits:1})+' %';
+const PRMAX=Math.max(...DATA.planets.map(p=>p.pr),DATA.sun.pr);
+let turn=!RM&&!QS.has('still'), userCam=false, framed=false, used=false;
+
+// ---------- тексты ----------
+function texts(){
+  document.documentElement.lang=LANG;
+  document.querySelectorAll('[data-t]').forEach(e=>{e.textContent=T(e.dataset.t)});
+  document.querySelectorAll('[data-tt]').forEach(e=>{e.title=T(e.dataset.tt);e.setAttribute('aria-label',T(e.dataset.tt))});
+  $('bLang').textContent=LANG==='ru'?'EN':'RU';$('bLang').setAttribute('aria-label',LANG==='ru'?'English':'Русский');
+  labTexts();PL.forEach(e=>{e._w=e._h=0});outliner();panels();card();tools()}
+function tools(){
+  $('bPersp').textContent=ortho?T('ortho'):T('persp');
+  $('bTurn').classList.toggle('on',turn);$('bOvl').classList.toggle('on',OVL);$('bSide').classList.toggle('on',!BODY.classList.contains('noside'));
+  document.querySelectorAll('.views [data-act]').forEach(b=>b.classList.toggle('on',b.dataset.act===named));
+  document.querySelectorAll('[data-act="pP"],[data-act="pO"]').forEach(b=>b.classList.toggle('on',(b.dataset.act==='pO')===ortho));
+  const sb=$('bSim');if(sb){sb.textContent=simOn?T('pause'):T('play');sb.classList.toggle('on',simOn)}}
+
+// ---------- outliner ----------
+function outliner(){
+  const s=DATA.sun,rows=[`<div class="orow${sel===0?' on':''}" role="button" tabindex="0" data-b="0" style="--c:${s.hex}"><span class="dot"></span>`+
+    `<span class="nm">NANO<small>${T('sunDom')}</small></span><span class="ct">${nf(s.n)}</span><span></span></div>`];
+  DATA.planets.forEach((p,i)=>rows.push(`<div class="orow${VIS[i]?'':' off'}${sel===1+i?' on':''}" role="button" tabindex="0" data-b="${1+i}" style="--c:${p.hex}">`+
+    `<span class="dot"></span><span class="nm">${p.agent}<small>${dom(p)}</small></span><span class="ct">${nf(p.n)}</span>`+
+    `<button class="eye" data-eye="${i}" title="${T('eye')}" aria-label="${T('eye')} ${p.agent}" aria-pressed="${!VIS[i]}">${VIS[i]?EYE_ON:EYE_OFF}</button></div>`));
+  $('outl').innerHTML=rows.join('')}
+function toggleVis(i){VIS[i]^=1;if(!VIS[i]&&(sel===1+i||follow===1+i)){select(-1);follow=-1}activate();heat(.45);outliner()}
+$('outl').addEventListener('click',e=>{const eye=e.target.closest('[data-eye]');if(eye){e.stopPropagation();toggleVis(+eye.dataset.eye);return}
+  const r=e.target.closest('[data-b]');if(!r)return;const b=+r.dataset.b;if(b>0&&!VIS[b-1])toggleVis(b-1);select(b);frameBody(b);userCam=true;
+  if(VW<=760)setSide(false)});
+$('outl').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-b]')){e.preventDefault();e.target.click()}});
+
+// ---------- поля-ползунки ----------
+function field(host,o){
+  const l=document.createElement('label');l.className='bf';l.title=T('dblHint');
+  l.innerHTML=`<input type="range" min="${o.min}" max="${o.max}" step="${o.step}" value="${o.get()}" aria-label="${o.label}"><span class="bl"></span><span class="bv"></span>`;
+  const inp=l.firstChild,bl=l.children[1],bv=l.children[2];bl.textContent=o.label;
+  const upd=()=>{const v=+inp.value;l.style.setProperty('--p',((v-o.min)/(o.max-o.min)*100).toFixed(1)+'%');bv.textContent=o.fmt(v)};
+  inp.addEventListener('input',()=>{o.set(+inp.value);upd()});
+  l.addEventListener('dblclick',()=>{inp.value=o.def;o.set(o.def);upd()});
+  upd();host.appendChild(l);
+  if(o.note){const n=document.createElement('p');n.className='note';n.textContent=o.note;host.appendChild(n)}}
+function seg(host,btns){const d=document.createElement('div');d.className='seg';
+  d.innerHTML=btns.map(b=>`<button data-act="${b[0]}"${b[2]?` id="${b[2]}"`:''}>${b[1]}</button>`).join('');host.appendChild(d)}
+const f2=v=>v.toFixed(2);
+function panels(){
+  const pv=$('pView'),pg=$('pGraph'),pp=$('pPhys');pv.innerHTML=pg.innerHTML=pp.innerHTML='';
+  field(pv,{label:T('lens'),min:18,max:135,step:1,def:50,get:()=>Math.round(goal.lens),set:v=>{goal.lens=v;userCam=true},fmt:v=>v+' mm',note:T('lensN')});
+  seg(pv,[['pP',T('vPersp').replace(/^.*· /,'')],['pO',T('vOrtho').replace(/^.*· /,'')]]);
+  field(pg,{label:T('topk'),min:50,max:100,step:1,def:75,get:()=>P.K,set:v=>{P.K=v;activate();heat(.5)},fmt:v=>String(v),note:T('topkN')});
+  field(pp,{label:T('gravity'),min:0,max:3,step:.05,def:1,get:()=>P.gravity,set:v=>{P.gravity=v;heat(.6)},fmt:f2});
+  field(pp,{label:T('repel'),min:.2,max:3,step:.05,def:1,get:()=>P.repel,set:v=>{P.repel=v;heat(.6)},fmt:f2});
+  field(pp,{label:T('link'),min:.5,max:2,step:.05,def:1,get:()=>P.link,set:v=>{P.link=v;heat(.6)},fmt:f2,note:T('physN')});
+  seg(pp,[['sim',simOn?T('pause'):T('play'),'bSim'],['bang',T('bang')]]);
+  const en=document.createElement('div');en.className='energy';en.id='en';pp.appendChild(en);tools()}
+
+// ---------- карточка выбранного ----------
+function select(b){sel=b;card();if(b>=0&&VW<=760)setSide(false);layOff();
+  document.querySelectorAll('#outl .orow').forEach(r=>r.classList.toggle('on',+r.dataset.b===b))}
+function card(){
+  const c=$('card');if(sel<0){c.hidden=true;return}
+  const kv=(k,v,bar,col)=>`<span>${k}</span><b>${v}</b>`+(bar!=null?`<div class="bar" style="--c:${col}"><i style="width:${(100*clamp(bar,0,1)).toFixed(1)}%"></i></div>`:'');
+  const br=(name,hex,w)=>`<div class="br" style="--c:${hex}"><span class="dot"></span>${name}<b>${nf(w)}</b></div>`;
+  let h;
+  if(sel===0){const s=DATA.sun,ws=DATA.planets.map((p,i)=>[p,DATA.sunw[i]]).sort((a,b)=>b[1]-a[1]);
+    h=`<div class="hd" style="--c:${s.hex}"><span class="dot"></span><div><b>NANO</b><small>${T('sunDom')}</small></div><button class="x" data-act="desel" aria-label="${T('close')}">×</button></div>`+
+      `<p class="note" style="margin:0 0 6px;font-size:12px;color:var(--dim)">${T('sunAbout')}</p>`+
+      `<div class="kv">${kv(T('cNotes'),nf(s.n))}${kv(T('prshare'),pct(s.pr),s.pr/PRMAX,s.hex)}${kv(T('sunLinks'),nf(DATA.sunw.reduce((a,b)=>a+b,0)))}</div>`+
+      `<div class="sub">${T('bridges')}</div>`+ws.slice(0,3).map(([p,w])=>br(p.agent,p.hex,w)).join('')}
+  else{const i=sel-1,p=DATA.planets[i],K=Math.min(P.K,p.n);
+    const bs=DATA.bridges.filter(b=>b[0]===i||b[1]===i).map(b=>[b[0]===i?b[1]:b[0],b[2]]).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const tops=[];for(let r=0;r<K&&tops.length<8;r++){const m=PSTART[i]+r;if(m<NM&&DATA.moons[m][0]===i&&DATA.moons[m][3]>=0)tops.push(DATA.labels[DATA.moons[m][3]])}
+    h=`<div class="hd" style="--c:${p.hex}"><span class="dot"></span><div><b>${p.agent}</b><small>${dom(p)}</small></div><button class="x" data-act="desel" aria-label="${T('close')}">×</button></div>`+
+      `<div class="kv">${kv(T('cNotes'),nf(p.n))}${kv(T('shown'),nf(K))}${kv(T('prshare'),pct(p.pr),p.pr/PRMAX,p.hex)}`+
+      `${kv(T('focus'),pct(p.focus),p.focus,p.hex)}${kv(T('core'),nf(DATA.sunw[i]))}</div>`+
+      `<div class="sub">${T('bridges')}</div>`+bs.map(([j,w])=>br(DATA.planets[j].agent,DATA.planets[j].hex,w)).join('')+
+      (tops.length?`<div class="sub">${T('topn')}</div><div class="tops">${tops.map(t=>`<span>${t}</span>`).join('')}</div>`:'')}
+  c.innerHTML=h;c.hidden=false}
+
+// ---------- кнопки ----------
+function setSide(on){const was=!BODY.classList.contains('noside');BODY.classList.toggle('noside',!on);
+  // телефон: лист закрывает пол-экрана — сцена перекадрируется в полосу над ним (и обратно)
+  if(VW<=760&&was!==on){if(follow>0)frameBody(follow);else frameAll()}else layOff();tools()}
+function act(a){used=true;BODY.classList.add('used');
+  if(VIEWS[a]){turn=false;setView(a);userCam=true}
+  else if(a==='persp'){ortho=!ortho;autoOrtho=false}
+  else if(a==='pP'){ortho=false;autoOrtho=false}else if(a==='pO'){ortho=true;autoOrtho=false}
+  else if(a==='frame'){frameAll();userCam=true}
+  else if(a==='turn'){turn=!turn;if(turn)leaveNamed()}
+  else if(a==='ovl'){OVL=!OVL}
+  else if(a==='lang'){LANG=LANG==='ru'?'en':'ru';texts();return}
+  else if(a==='side'){setSide(BODY.classList.contains('noside'));return}
+  else if(a==='zin')zoom(.8);else if(a==='zout')zoom(1.25);
+  else if(a==='sim'){simOn=!simOn;if(simOn)heat(.3)}
+  else if(a==='bang'){bang();activate();framed=false;userCam=false}
+  else if(a==='desel')select(-1);
+  tools()}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b)act(b.dataset.act)});
+
+// ---------- ввод: орбита · сдвиг · зум · захват ----------
+const PTR=new Map();let mode='',moved=0,lx=0,ly=0,pinch0=0,vyaw=0,vpitch=0,lastMove=0;
+const tip=$('tip');
+function tipFor(b,x,y){
+  if(b<0){tip.hidden=true;return}
+  let h;
+  if(b===0)h=`<b>NANO</b><small>${nf(DATA.sun.n)} ${T('notes')}</small>`;
+  else if(KIND[b]===1){const p=DATA.planets[b-1];h=`<b>${p.agent}</b> · ${dom(p)}<small>${nf(p.n)} ${T('notes')}</small>`}
+  else{const m=DATA.moons[b-MO],p=DATA.planets[m[0]];
+    h=(m[3]>=0?`<b>${DATA.labels[m[3]]}</b>`:`<b>${p.agent}</b> · ${T('note')} #${RANK[b]+1}`)+`<small>PR #${RANK[b]+1} · ${nf(m[2])} ${T('links')}</small>`}
+  tip.innerHTML=h;tip.hidden=false;
+  const w=tip.offsetWidth;tip.style.left=Math.min(x+14,VW-w-8)+'px';tip.style.top=(y+16)+'px'}
+function grabTo(x,y){const w=toWorld(x,y,SD[grab]);PX[grab]=w[0];PY[grab]=w[1];PZ[grab]=w[2];heat(.3)}
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);PTR.set(e.pointerId,[e.clientX,e.clientY]);used=true;BODY.classList.add('used');
+  vyaw=vpitch=0;moved=0;lx=e.clientX;ly=e.clientY;tip.hidden=true;
+  if(PTR.size===2){const p=[...PTR.values()];pinch0=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]);lx=(p[0][0]+p[1][0])/2;ly=(p[0][1]+p[1][1])/2;
+    if(grab>=0)grab=-1;mode='pinch';return}
+  const b=pick(e.clientX,e.clientY);
+  if(e.button===0&&!e.shiftKey&&b>0&&KIND[b]===1){mode='grab';grab=b;cv.classList.add('move')}
+  else{mode=(e.shiftKey||e.button===1||e.button===2)?'pan':'orbit';cv.classList.add('drag')}});
+cv.addEventListener('pointermove',e=>{
+  if(!PTR.has(e.pointerId)){// наведение
+    if(e.pointerType==='mouse'){const b=pick(e.clientX,e.clientY);hov=b;cv.classList.toggle('pt',b>=0);tipFor(b,e.clientX,e.clientY)}return}
+  PTR.set(e.pointerId,[e.clientX,e.clientY]);
+  if(mode==='pinch'&&PTR.size>=2){const p=[...PTR.values()],d=Math.hypot(p[0][0]-p[1][0],p[0][1]-p[1][1]),cx=(p[0][0]+p[1][0])/2,cy=(p[0][1]+p[1][1])/2;
+    if(pinch0>0)zoom(pinch0/Math.max(d,1));pinch0=d;pan(cx-lx,cy-ly);lx=cx;ly=cy;moved=9;userCam=true;return}
+  const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);
+  if(moved<4)return;
+  if(mode==='grab'){grabTo(e.clientX,e.clientY);return}
+  userCam=true;
+  if(mode==='orbit'){if(turn){turn=false;tools()}orbit(dx,dy);vyaw=dx;vpitch=dy;lastMove=performance.now();tools()}
+  else if(mode==='pan')pan(dx,dy)});
+function up(e){
+  if(!PTR.has(e.pointerId))return;PTR.delete(e.pointerId);
+  if(PTR.size===1&&mode==='pinch'){const p=[...PTR.values()][0];lx=p[0];ly=p[1];mode='pan';return}
+  if(PTR.size)return;
+  cv.classList.remove('drag','move');
+  if(mode==='grab'){if(moved<4){select(grab)}grab=-1;heat(.25)}
+  else if(moved<4&&mode!=='pinch'){const b=pick(e.clientX,e.clientY);select(b<0?-1:KIND[b]===2?OWN[b]:b)}
+  if(mode!=='orbit'||performance.now()-lastMove>90)vyaw=vpitch=0;
+  mode=''}
+cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+cv.addEventListener('pointerleave',()=>{if(!PTR.size){hov=-1;tip.hidden=true}});
+cv.addEventListener('dblclick',e=>{const b=pick(e.clientX,e.clientY);if(b<0){frameAll()}else{const t=KIND[b]===2?OWN[b]:b;select(t);frameBody(t)}userCam=true});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{e.preventDefault();used=true;BODY.classList.add('used');userCam=true;
+  zoom(Math.exp(clamp(e.deltaY*(e.deltaMode?30:1),-240,240)*.0015))},{passive:false});
+// гизмо: щелчок по оси — вид по ней, тяга — орбита
+let gzDown=null;
+gz.addEventListener('pointerdown',e=>{gz.setPointerCapture(e.pointerId);const r=gz.getBoundingClientRect();
+  gzDown={x:e.clientX,y:e.clientY,ax:gzPick(e.clientX-r.left,e.clientY-r.top),m:0};used=true;BODY.classList.add('used')});
+gz.addEventListener('pointermove',e=>{const r=gz.getBoundingClientRect();
+  if(!gzDown){gzHov=gzPick(e.clientX-r.left,e.clientY-r.top);return}
+  const dx=e.clientX-gzDown.x,dy=e.clientY-gzDown.y;gzDown.x=e.clientX;gzDown.y=e.clientY;gzDown.m+=Math.abs(dx)+Math.abs(dy);
+  if(gzDown.m>3){if(turn){turn=false}orbit(dx*1.6,dy*1.6);userCam=true;tools()}});
+gz.addEventListener('pointerup',()=>{if(gzDown&&gzDown.m<=3&&gzDown.ax>=0){turn=false;setView(AX[gzDown.ax][3]);userCam=true;tools()}gzDown=null});
+gz.addEventListener('pointerleave',()=>{if(!gzDown)gzHov=-1});
+
+// ---------- клавиши как в Blender ----------
+addEventListener('keydown',e=>{
+  if(e.target.matches&&e.target.matches('input,textarea'))return;
+  const k=e.key,c=e.ctrlKey||e.metaKey;
+  const map={'1':c?'back':'front','3':c?'left':'right','7':c?'bottom':'top'};
+  if(map[k]){e.preventDefault();act(map[k]);return}
+  if(k==='5'){act('persp')}else if(k==='Home'){act('frame')}else if(k==='.'||k==='Delete'&&e.location===3){if(sel>=0){frameBody(sel);userCam=true}}
+  else if(k==='n'||k==='N'){act('side')}else if(k===' '&&e.target===BODY){e.preventDefault();act('sim')}
+  else if(k==='Escape')select(-1);else if(k==='+'||k==='=')zoom(.85);else if(k==='-')zoom(1.18)});
+addEventListener('resize',()=>{resize();layOff();cam.ox=goal.ox;cam.oy=goal.oy});
+
+// ---------- строка вьюпорта и статистика ----------
+let fps=60;
+function hud(){
+  $('vName').textContent=(named?T(named):T('vUser'))+' '+(ortho?T('vOrtho'):T('vPersp'));
+  const sn=sel<0?'—':sel===0?'NANO':DATA.planets[sel-1].agent;
+  $('vObj').innerHTML=`(1) ${T('outliner')} | <b>${sn}</b>`;
+  const nm=ACT.length-[...VIS].reduce((a,b)=>a+b,0),ne=EA.length/2,np=1+[...VIS].reduce((a,b)=>a+b,0);
+  $('vStats').style.display=OVL?'':'none';
+  $('vStats').innerHTML=`<i>${T('objects')}</i>   ${sel<0?0:1} / ${np}\n<i>${T('vertices')}</i>  ${nf(nm)} / ${nf(DATA.V)}\n<i>${T('edges')}</i>     ${nf(ne)} / ${nf(DATA.E)}\n<i>Q</i>         ${DATA.Q.toFixed(3)}\n<i>${T('fps')}</i>       ${Math.round(fps)}`;
+  const en=$('en');if(en){const w=clamp(Math.log10(KE+1)/6,0,1)*110;
+    en.innerHTML=`<span>${T('energy')}</span><span>${KE<1?KE.toFixed(2):nf(Math.round(KE))}<i style="width:${w.toFixed(0)}px"></i></span>`}}
+
+// ---------- старт и цикл ----------
+bang();activate();
+if(QS.get('film'))BODY.classList.add('film');
+BODY.classList.toggle('noside',QS.has('side')?QS.get('side')!=='1':innerWidth<=760);
+texts();resize();layOff();cam.ox=goal.ox;cam.oy=goal.oy;
+cam.dist=goal.dist=fitDist(820);
+const SETTLE=+QS.get('settle')||0;for(let i=0;i<SETTLE;i++)step();
+if(SETTLE){frameAll();framed=true;Object.assign(cam,goal)}
+if(QS.get('view')){setView(QS.get('view'),true);turn=false}
+{const s=QS.get('sel'),i=DATA.planets.findIndex(p=>p.k===s||p.agent===s);if(i>=0){select(1+i);if(SETTLE){frameBody(1+i);Object.assign(cam,goal);cam.tx=PX[1+i];cam.ty=PY[1+i];cam.tz=PZ[1+i]}}else if(s==='NANO')select(0)}
+let last=performance.now(),tick=0;
+function frame(now){
+  const dt=Math.min(.05,Math.max(.001,(now-last)/1000));last=now;fps+=(1/dt-fps)*.05;
+  if(simAwake()){step();if(alpha>.35)step()}
+  if(!framed&&alpha<.05){framed=true;if(!userCam)frameAll()}
+  if(turn&&!PTR.size&&grab<0)goal.yaw+=dt*.07;
+  if(!PTR.size&&(vyaw||vpitch)){orbit(vyaw,vpitch);vyaw*=.9;vpitch*=.9;if(Math.abs(vyaw)+Math.abs(vpitch)<.05)vyaw=vpitch=0}
+  smooth(dt);basis();draw(now/1000);labels();gizmo();
+  if(grab>=0&&PTR.size===1){const p=[...PTR.values()][0];grabTo(p[0],p[1])}
+  if(++tick%12===0)hud();
+  requestAnimationFrame(frame)}
+basis();hud();requestAnimationFrame(frame);
+window.__brain={get alpha(){return alpha},get steps(){return steps},get KE(){return KE},NP,
+  scr:b=>[SX[b],SY[b],SR[b],SVIS[b]],get sel(){return sel},get named(){return named},get ortho(){return ortho}};
+
+})();</script>
+</body>
+</html>
