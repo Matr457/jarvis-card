@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Talk to NANO</title>
+<link rel="stylesheet" href="av/fonts/fonts.css">
+<style>
+/* токены: NANO_FINAL/04_UI_SPECS/tokens.css · правила: ASSETS/pitch-b2b/DESIGN.md · язык VN, раскладка своя */
+:root{
+  --night:#070b22; --indigo:#0b1030; --navy:#1c2160; --violet:#9b7bff; --lilac:#b9a6ff;
+  --pink:#ffb3e6; --mint:#9ff7c1; --gold:#ffe79a; --pearl:#f4f0ff;
+  --fd:Montserrat,'Segoe UI',system-ui,sans-serif; --fb:Inter,'Segoe UI',system-ui,sans-serif;
+  --glass:rgba(11,16,48,.66); --glass-hi:rgba(11,16,48,.90); --edge:1px solid rgba(185,166,255,.24);
+  --pad:clamp(20px,6vw,110px);
+  --H:92vh; --cx:27vw; --col:min(540px,40vw);
+  --boxb:3.1vh; --boxh:18vh;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#05071a;color:var(--pearl);font-family:var(--fb);overflow:hidden;-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.stage{position:fixed;inset:0;overflow:hidden;background:var(--night);isolation:isolate}
+.bg,.bg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bg .ph{display:none}
+
+/* ---------- NANO: статичные спрайты TG-набора, поза меняется по смыслу ответа (перетекание без движения) ---------- */
+.nano{position:absolute;left:0;bottom:0;width:calc(var(--cx)*2);height:var(--H);pointer-events:none}
+.nano img{position:absolute;left:50%;bottom:0;height:100%;width:auto;transform:translateX(-50%);display:block;opacity:0;transition:opacity .28s ease}
+.nano img.on{opacity:1}
+
+/* ---------- верхняя строка ---------- */
+.pill{display:flex;align-items:center;height:44px;background:var(--glass);border:var(--edge);border-radius:999px;backdrop-filter:blur(14px)}
+.top{position:absolute;left:var(--pad);right:var(--pad);top:2.7vh;height:44px;display:flex;justify-content:space-between;gap:12px;z-index:5}
+.meta{padding:0 20px;gap:14px}
+.logo{font:800 13px var(--fd);letter-spacing:.26em}
+.sep{width:1px;height:16px;background:rgba(185,166,255,.35)}
+.state{display:flex;align-items:center;gap:8px;font:500 13px var(--fb);color:rgba(244,240,255,.82);white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;background:#6b7096}
+.live .dot{background:var(--mint)}
+.right{display:flex;gap:10px}
+.lang{padding:3px;gap:2px}
+.investor-en .lang{display:none}
+.lang button{height:36px;padding:0 16px;border-radius:999px;font:600 13px var(--fd);color:rgba(244,240,255,.6)}
+.lang button.on{background:var(--violet);color:var(--indigo)}
+.ibtn{display:grid;place-items:center;width:44px;height:44px;padding:0;color:var(--pearl)}
+.ibtn.off{color:rgba(244,240,255,.4)}
+.ibtn.off .wave{display:none}
+
+/* ---------- карточка мозга ---------- */
+.brain{position:absolute;right:var(--pad);top:calc(2.7vh + 44px + 18px);width:var(--col);padding:16px 18px 16px;background:var(--glass);border:var(--edge);border-radius:18px;backdrop-filter:blur(14px);z-index:4}
+.brain .row{display:flex;justify-content:space-between;align-items:center;font:600 11px var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--lilac)}
+.brain .row em{font-style:normal;font-weight:500;letter-spacing:.03em;text-transform:none;color:rgba(185,166,255,.75)}
+.brain .hint{font:400 14px/1.45 var(--fb);color:rgba(244,240,255,.74);margin-top:10px}
+.brain ul{list-style:none;margin-top:10px;display:grid;gap:2px}
+.brain li{display:flex;gap:11px;align-items:flex-start;padding:7px 0;font:500 14px/1.35 var(--fb);color:var(--pearl);border-top:1px solid rgba(185,166,255,.14);animation:rise .4s ease both}
+.brain li:first-child{border-top:0}
+.brain li i{width:9px;height:9px;border-radius:50%;flex:none;margin-top:5px}
+@keyframes rise{from{opacity:0;translate:0 6px}to{opacity:1;translate:0 0}}
+
+/* ---------- нижний блок: варианты + диалоговое окно ---------- */
+.dock{position:absolute;right:var(--pad);width:var(--col);bottom:var(--boxb);display:flex;flex-direction:column;gap:30px;z-index:5}
+.ch{display:grid;gap:10px;width:100%}
+.opt{display:flex;align-items:center;gap:14px;height:52px;padding:0 14px 0 12px;background:rgba(11,16,48,.82);border:var(--edge);border-radius:16px;backdrop-filter:blur(14px);color:var(--pearl);font:600 18px var(--fb);text-align:left;width:100%;transition:border-color .2s,background .2s}
+.opt .n{display:grid;place-items:center;width:32px;height:32px;border:1px solid rgba(185,166,255,.5);border-radius:50%;font:600 14px var(--fd);color:var(--lilac);flex:none}
+.opt .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+button.opt:hover:not(:disabled),button.opt:focus-visible{background:rgba(28,33,96,.9);border-color:var(--violet);outline:0}
+button.opt:hover:not(:disabled) .n,button.opt:focus-visible .n{background:var(--violet);border-color:var(--violet);color:var(--indigo)}
+.opt:disabled{opacity:.45;cursor:default}
+.opt.own{background:rgba(11,16,48,.62);cursor:text}
+.opt.own .n{border-style:dashed}
+.opt.own:focus-within{background:rgba(28,33,96,.9);border-color:var(--violet)}
+.opt.own input{flex:1;min-width:0;background:none;border:0;outline:0;font:500 18px var(--fb);color:var(--pearl)}
+.opt.own input::placeholder{color:rgba(244,240,255,.55);font-style:italic}
+.ib{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;color:var(--lilac);flex:none}
+.ib:hover{background:rgba(185,166,255,.16);color:var(--pearl)}
+.ib.go{background:var(--violet);color:var(--indigo)}
+.ib.go:hover{background:var(--lilac)}
+.listening #mic{background:var(--pink);color:#2a1245;animation:ring 1.4s ease-out infinite}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(255,179,230,.7)}100%{box-shadow:0 0 0 12px rgba(255,179,230,0)}}
+
+.box{position:relative;align-self:stretch;min-height:var(--boxh);display:flex;flex-direction:column;background:var(--glass-hi);border:var(--edge);border-radius:22px;backdrop-filter:blur(16px);box-shadow:0 20px 48px rgba(0,0,0,.42);padding:32px 30px 10px;cursor:default}
+.who{position:absolute;left:32px;top:-19px;display:flex;align-items:center;gap:10px;height:38px;padding:0 22px;background:var(--pink);color:#2a1245;font:800 15px var(--fd);letter-spacing:.16em;border-radius:12px}
+.who i{width:8px;height:8px;border-radius:50%;background:#2a1245;opacity:.35}
+.speaking .who i{opacity:1;animation:blink .7s ease-in-out infinite alternate}
+@keyframes blink{to{opacity:.25}}
+.txt{flex:1;overflow:auto;max-height:30vh;scrollbar-width:thin;scrollbar-color:rgba(185,166,255,.4) transparent}
+.ask{font:500 14px var(--fb);color:var(--lilac);letter-spacing:.01em;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ask:empty{display:none}
+.ask b{font:700 11px var(--fd);letter-spacing:.14em;text-transform:uppercase;margin-right:8px;color:rgba(185,166,255,.7)}
+.say{font-weight:500;font-size:clamp(16px,2.2vh,21px);line-height:1.5;color:var(--pearl)}
+.say.mid{font-size:clamp(15px,2vh,19px)}
+.say.long{font-size:clamp(14px,1.8vh,17px)}
+.say.think{color:rgba(244,240,255,.8);font-style:italic}
+.say .caret{display:inline-block;width:2px;height:1em;background:var(--violet);margin-left:3px;vertical-align:-.12em;animation:blink .6s steps(2) infinite}
+.say .dots span{display:inline-block;width:.38em;height:.38em;margin-left:.3em;border-radius:50%;background:var(--lilac);animation:dot 1s ease-in-out infinite}
+.say .dots span:nth-child(2){animation-delay:.15s}.say .dots span:nth-child(3){animation-delay:.3s}
+@keyframes dot{0%,100%{opacity:.25;translate:0 0}40%{opacity:1;translate:0 -.18em}}
+.foot{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:10px;min-height:46px}
+.voice{display:flex;align-items:center;gap:12px;color:var(--lilac);font:500 12px var(--fb);letter-spacing:.04em}
+.play{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid rgba(185,166,255,.5);color:var(--pearl);flex:none}
+.play:hover{background:rgba(185,166,255,.16)}
+.play.pulse{animation:ring2 1.8s ease-out infinite}
+@keyframes ring2{0%{box-shadow:0 0 0 0 rgba(155,123,255,.7)}100%{box-shadow:0 0 0 12px rgba(155,123,255,0)}}
+.bars{display:flex;align-items:center;gap:4px;height:22px}
+.bars i{width:2.4px;height:5px;border-radius:2px;background:var(--lilac);opacity:.55;transition:height .2s}
+.speaking .bars i{opacity:1;background:var(--pearl);animation:bar .8s ease-in-out infinite alternate}
+@keyframes bar{from{height:4px}to{height:var(--h,18px)}}
+.status{min-width:84px;white-space:nowrap}
+.qm{display:flex;align-items:center;gap:26px}
+.qm button{display:flex;align-items:center;gap:7px;font:500 13px var(--fb);color:rgba(244,240,255,.74);white-space:nowrap}
+.qm button:hover{color:var(--pearl)}
+.qm svg.i{width:16px;height:16px}
+
+/* ---------- лог ---------- */
+.log{position:absolute;right:var(--pad);top:calc(2.7vh + 44px + 18px);bottom:var(--boxb);width:var(--col);display:none;flex-direction:column;background:#0b1030;border:var(--edge);border-radius:18px;z-index:8;overflow:hidden}
+.log.open{display:flex}
+.log h3{display:flex;justify-content:space-between;align-items:center;padding:16px 18px 12px;font:600 11px var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--lilac)}
+.log .list{flex:1;overflow:auto;padding:0 18px 16px;display:grid;gap:12px;align-content:start;scrollbar-width:thin;scrollbar-color:rgba(185,166,255,.4) transparent}
+.log .m{font:400 15px/1.5 var(--fb);color:var(--pearl);padding:10px 14px;border-radius:14px;background:rgba(28,33,96,.55);max-width:92%}
+.log .m.you{justify-self:end;background:rgba(155,123,255,.22);border:1px solid rgba(155,123,255,.4)}
+.log .m b{display:block;font:700 10px var(--fd);letter-spacing:.14em;text-transform:uppercase;color:var(--lilac);margin-bottom:3px}
+
+@media (prefers-reduced-motion:reduce){.play.pulse,.listening #mic,.say .dots span,.say .caret{animation:none!important}}
+
+/* ---------- узкий экран / телефон ---------- */
+@media (max-width:820px){
+  :root{--pad:12px;--H:max(230px,calc(100dvh - 330px - 54px));--cx:50vw;--col:calc(100vw - 24px);--boxb:10px;--boxh:150px}
+  .nano{bottom:330px}
+  .bg .pc{display:none}.bg .ph{display:block}
+  .top{top:10px;height:40px}
+  .meta{padding:0 14px;gap:10px}.logo{font-size:12px}.sep,.state span{display:none}
+  .pill{height:40px}.lang button{height:32px;padding:0 12px}.ibtn{width:40px;height:40px}
+  .brain{display:none}
+  .dock{gap:26px}
+  .ch{gap:7px}
+  .opt{height:44px;font-size:15px;gap:11px;padding:0 10px 0 8px;border-radius:13px}
+  .opt .n{width:26px;height:26px;font-size:12px}.opt.own input{font-size:15px}.ib{width:30px;height:30px}
+  .box{padding:26px 16px 8px;border-radius:18px;min-height:var(--boxh)}
+  .who{left:18px;top:-16px;height:32px;padding:0 16px;font-size:12px}
+  .txt{max-height:22dvh}
+  .say{font-size:15px;line-height:1.42}.say.mid{font-size:14.5px}.say.long{font-size:13.5px}
+  .ask{font-size:12px}
+  .foot{padding-top:6px;min-height:40px}.bars,.status{display:none}
+  .qm{gap:14px}.qm button{font-size:0;gap:0}.qm svg.i{width:19px;height:19px}
+  .log{left:12px;right:12px;width:auto;top:60px;bottom:10px}
+}
+
+.pill.lang{display:none!important}  /* RAINBOW: язык задаёт визитка */
+
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-log" viewBox="0 0 24 24"><path d="M5 6.5h14M5 12h14M5 17.5h9"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4z"/><path class="wave" d="M16 9.5a4 4 0 010 5M18.6 7a7.5 7.5 0 010 10"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</svg>
+
+<main class="stage" id="stage">
+  <div class="bg"><img class="pc" src="bg/bridge.jpg" alt=""><img class="ph" src="bg/bridge-phone.jpg" alt=""></div>
+
+  <div class="nano" aria-hidden="true">
+    <img id="stkA" class="on" src="av/hello.webp" alt=""><img id="stkB" src="av/idea.webp" alt="">
+  </div>
+
+  <header class="top">
+    <div class="pill meta" id="meta"><span class="logo">NANO</span><i class="sep"></i><span class="state"><i class="dot"></i><span id="stateTx"></span></span></div>
+    <div class="right">
+      <div class="pill lang" role="group" aria-label="Language"><button id="lEn" data-l="en">EN</button><button id="lRu" data-l="ru">RU</button></div>
+      <button class="pill ibtn" id="snd" aria-label="Sound"><svg class="i"><use href="#i-speaker"/></svg></button>
+    </div>
+  </header>
+
+  <aside class="brain" id="brain" aria-live="polite"></aside>
+
+  <section class="log" id="log"><h3><span id="logT"></span><button class="ib" id="logX" aria-label="Close"><svg class="i"><use href="#i-x"/></svg></button></h3><div class="list" id="logList"></div></section>
+
+  <div class="dock">
+    <div class="ch" id="ch"></div>
+    <div class="box" id="box">
+      <div class="who">NANO<i></i></div>
+      <div class="txt"><div class="ask" id="ask"></div><p class="say" id="say"></p></div>
+      <div class="foot">
+        <div class="voice">
+          <button class="play pulse" id="play" aria-label="Play"><svg class="i"><use href="#i-play"/></svg></button>
+          <div class="bars" id="bars" aria-hidden="true"></div>
+          <span class="status" id="status"></span>
+        </div>
+        <div class="qm">
+          <button id="qLog"><svg class="i"><use href="#i-log"/></svg><span id="qLogT"></span></button>
+          <button id="qMic"><svg class="i"><use href="#i-mic"/></svg><span id="qMicT"></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="application/json" id="kb">{"about": "База знаний офлайн-NANO для питча инвесторам (14.11). Факты — только из канона (projects.md, CV, profile.yaml) и слова оператора 14.11 о сделке. {NOTES} {LINKS} {COMMITS} подставляет make.py. Правка фактов — только здесь.", "welcome": {"ru": "Привет! Я NANO — ИИ-команда Ильдара. Спросите меня про JARVIS и его цвета — или спросите мой мозг о чём угодно: в нём {NOTES} заметок, от математики до менеджмента. Можно голосом — нажмите на микрофон.", "en": "Hi! I'm NANO — Ildar's AI team. Ask me about JARVIS and its colours — or ask my brain anything: it holds {NOTES} notes, from math to management. You can talk — tap the mic."}, "chips": [{"ru": "Что в мозге про PageRank?", "en": "What does the brain know about PageRank?"}, {"ru": "Как агенту не наломать дров?", "en": "How do agents avoid failure modes?"}, {"ru": "Кто основатель?", "en": "Who is the founder?"}, {"ru": "Чем вы лучше ChatGPT?", "en": "How are you better than ChatGPT?"}], "intents": [{"id": "greet", "keys": [" привет", "здравств", "добрый", "доброе", " hello", " hi ", " hey"], "ru": "Привет! Рада знакомству. Начнём с JARVIS или с Ильдара?", "en": "Hi! Nice to meet you. Shall we start with JARVIS or with Ildar?", "chips": [{"ru": "Что такое NANO?", "en": "What is NANO?"}]}, {"id": "what", "keys": ["что такое", "что ты", "кто ты", "что это", "о себе", "what is", "who are you", "about you", "what do you do"], "ru": "Я NANO — ИИ-команда в телефоне. Вы бросаете мне мысли, голос и ссылки, я раскладываю их по темам, нахожу связи и каждое утро приношу один экран: план, повторение и решения на кнопку «Одобрить». Внутри — {NOTES} заметок и {LINKS} связей мозга Ильдара.", "en": "I'm NANO — an AI team in your phone. You drop me thoughts, voice notes and links; I file them by topic, find the connections and every morning bring one screen: the plan, reviews and decisions on an “Approve” tap. Inside — {NOTES} notes and {LINKS} links of Ildar's brain.", "go": "#home", "chips": []}, {"id": "round", "keys": ["сколько прос", "вы просите", "сколько вам", "how much are you", "сколько хоти", "сколько нужно", "раунд", "оценк", "доля", "долю", "процент", "инвест", "вложить", "вложен", "сделк", "how much", "raising", "valuation", "equity", "stake", "invest", "the deal", "the ask", "round"], "ru": "Раунд 1: $300 000 за 3 % — оценка $10 000 000 post-money ($300 000 ÷ 3 %). Цель следующего раунда — оценка $100 000 000, там продаём до 10 %. Видение — девять нулей. Детали Ильдар обсудит лично — он рядом.", "en": "Round 1: $300,000 for 3 % — a $10,000,000 post-money valuation ($300,000 ÷ 3 %). The next round targets a $100,000,000 valuation, selling up to 10 %. The vision is nine zeros. Ildar will go through the details in person — he's right here.", "go": "#ask", "chips": [{"ru": "Как связаться?", "en": "How do I get in touch?"}]}, {"id": "next", "keys": ["следующ", "что дальше", "после раунда", "after the round", "what comes after", "второй раунд", "раунд 2", "миллиард", "девять нулей", "9 нулей", "выход", "exit", "billion", "nine zeros", "next round", "round 2", "vision", "видение", "x10", "иксы", "заработаю", "return"], "ru": "Раунд 2 — цель оценка $100M, продаём до 10 %. После него ваши 3 % станут ≈ 2,7 % — на бумаге ≈ $2 700 000. Дальше — видение $1 млрд. Это цель, не обещание.", "en": "Round 2 targets a $100M valuation, selling up to 10 %. After it your 3 % becomes ≈ 2.7 % — about $2,700,000 on paper. After that — a $1B vision. A target, not a promise.", "go": "#ladder", "chips": []}, {"id": "funds", "keys": ["на что", "куда пойдут", "куда деньги", "потрат", "use of funds", "what is the money", "spend", "money for"], "ru": "Три направления: продукт — серверы и ИИ-модели, NANO в Telegram для тысяч людей; продажи — B2B-пилоты NANO CEO и вузы; команда — первые инженеры и продажи. Разбивку по суммам Ильдар покажет лично.", "en": "Three areas: product — servers and AI models, NANO in Telegram for thousands of people; sales — B2B pilots of NANO CEO and universities; team — the first engineers and sales. Ildar will show the split by amounts in person.", "go": "#funds", "chips": []}, {"id": "money", "keys": ["зарабат", "монетиз", "бизнес-модел", "выручк", "цен", "стоит", "тариф", "подписк", "make money", "revenue", "business model", "price", "pricing", "cost", "subscription"], "ru": "Три продукта на одном ядре. Для людей: Free, Pro — $12 в месяц, Studio — от $3 за образы и стикеры NANO. Для бизнеса: NANO CEO, пилот 3 недели — 250 000 ₽. Для вузов: NANO Teacher, пилот.", "en": "Three products on one core. For people: Free, Pro at $12 a month, Studio from $3 for NANO outfits and stickers. For business: NANO CEO, a 3-week pilot at ₽250,000. For universities: NANO Teacher, a pilot.", "go": "#products", "chips": []}, {"id": "ceo", "keys": ["бизнес", "руковод", "компани", " ceo", "отдел", "пилот", "b2b", "business", "company", "pilot", "department", "executive"], "ru": "NANO CEO — ИИ-отдел для руководителя. Ночью агенты разбирают почту, задачи и документы; утром — черновики. Наружу ничего не уходит без «Одобрить», любой шаг откатывается, модель ИИ выбирает клиент. Пилот — 3 недели, 250 000 ₽; оффер уже у первого клиента.", "en": "NANO CEO is an AI department for the executive. Overnight, agents work through mail, tasks and documents; in the morning — drafts. Nothing leaves without “Approve”, every step can be rolled back, the client picks the AI model. The pilot is 3 weeks at ₽250,000; the offer is with the first client.", "go": "#ceo", "chips": []}, {"id": "teacher", "keys": ["teacher", "учител", "препод", "вуз", "универ", "студент", "образован", "учит", "teach", "universit", "student", "education", "school"], "ru": "NANO Teacher — ассистент преподавателя. Презентация к лекции — в 8 раз быстрее (36 секунд вместо 290), проверка знаний по четырём уровням — от школы до «злого босса». Работает на teacher.nineloom.com, первые пользователи — преподаватели МГУ-ППИ в Шэньчжэне.", "en": "NANO Teacher is a teaching assistant. Lecture slides 8× faster (36 seconds instead of 290), knowledge checks on four levels — from school to the “tough boss”. Live at teacher.nineloom.com; first users are faculty of Shenzhen MSU-BIT University.", "go": "#teacher", "chips": []}, {"id": "founder", "keys": ["основател", "кто ты такой", "ильдар", "кто стоит", "кто за", "команда", "образован", "опыт", "founder", "ildar", "who is behind", "team", "background", "experience"], "ru": "Ильдар Баязитов, 26 лет. Вычислительная математика МГУ (ВМК, двойной диплом), магистратура по менеджменту в МГУ-ППИ в Шэньчжэне, GPA 3,95. Гран-при «Ломоносов-2026», стипендия правительства Гуандуна 2025 и 2026, в Сбере (SberDevices) превращал часы ручной работы в минуты. Управляет 17 ИИ-агентами как отделом.", "en": "Ildar Bayazitov, 26. Computational mathematics at Moscow State University (double degree), a master's in management at Shenzhen MSU-BIT University, GPA 3.95. Lomonosov-2026 Grand Prix, Guangdong Government Scholarship 2025 and 2026; at Sber (SberDevices) he turned hours of manual work into minutes. He runs 17 AI agents like a department.", "go": "#awards", "chips": []}, {"id": "proof", "keys": ["доказ", "цифр", "трекшн", "traction", "пользовател", "клиент", "метрик", "реальн", "работает ли", "proof", "numbers", "users", "customers", "metrics", "real"], "ru": "Цифры, а не слова: {COMMITS} сохранённых версий проекта с 10 мая, {NOTES} заметок и {LINKS} связей в мозге, 1 218 автотестов, поиск в 89 раз дешевле на 50 000 заметок, презентация в 8 раз быстрее. Клиент № 1 — сам Ильдар, полгода каждый день. CEO-пилот — оффер у первого клиента; Teacher — на сервере у преподавателей.", "en": "Numbers, not words: {COMMITS} saved project versions since May 10, {NOTES} notes and {LINKS} links in the brain, 1,218 automated tests, search 89× cheaper at 50,000 notes, lecture slides 8× faster. Customer #1 is Ildar himself, every day for six months. The CEO pilot offer is with the first client; Teacher runs on a server for faculty.", "go": "#wins", "chips": []}, {"id": "revenue", "keys": ["выручка есть", "есть выручк", "есть деньги", "платят", "продажи есть", "revenue yet", "paying", "any sales"], "ru": "Честно: первая выручка — пилот NANO CEO за 250 000 ₽, оффер у клиента, ждём ответа. Продукт для людей выходит в Telegram — на это и нужен раунд.", "en": "Honestly: the first revenue is the NANO CEO pilot at ₽250,000 — the offer is with the client, we're waiting for the answer. The product for people is launching in Telegram — that's what the round is for.", "go": "#products", "chips": []}, {"id": "compete", "keys": ["конкурент", "отлича", "чем лучше", "chatgpt", "gpt", "notion", "obsidian", "аналог", "compet", "different", "better than", "alternative"], "ru": "ChatGPT отвечает на вопрос и забывает. Notion и Obsidian хранят, но раскладывать надо самому. NANO помнит вашу жизнь, сама раскладывает и связывает, а действует только по кнопке «Одобрить». И это измерено: ρ = 0,774 совпадения тем человека с сообществами графа.", "en": "ChatGPT answers and forgets. Notion and Obsidian store, but you file everything yourself. NANO remembers your life, files and links it on its own, and acts only on an “Approve” tap. And it's measured: ρ = 0.774 match between a person's topics and the graph's communities.", "go": "#science", "chips": []}, {"id": "papers", "keys": ["стать", "наук", "исследов", "публикац", "диплом", "paper", "research", "science", "article", "thesis", "publication"], "ru": "Две статьи: «Who Decides? Running an AI Department at the Crossroads» — с профессором, черновик ≈ 20 страниц; и формальная модель личного графа знаний — темы человека совпали с сообществами графа, ρ = 0,774 на 50 запусках. Плюс диплом про справедливость и эффективность команд людей и ИИ-агентов.", "en": "Two papers: “Who Decides? Running an AI Department at the Crossroads” — with a professor, a ≈ 20-page draft; and a formal model of a personal knowledge graph — a person's topics matched the graph's communities, ρ = 0.774 over 50 runs. Plus a thesis on fairness and performance in human–AI agent teams.", "go": "#science", "chips": []}, {"id": "tech", "keys": ["технолог", "как работает", "модел", "нейросет", " ии ", "llm", "архитект", "агент", "technolog", "how does it work", "model", "architecture", "agents", " ai "], "ru": "Ядро — граф знаний: {NOTES} заметок, {LINKS} связей, 8 галактик-тем. Поверх — 17 ИИ-агентов и диспетчер; ночная смена проходит 7 проверок, утром — отчёт. Каждый шаг сохраняется и откатывается. Модель ИИ — любая: от Claude до открытых моделей на своём сервере.", "en": "The core is a knowledge graph: {NOTES} notes, {LINKS} links, 8 topic galaxies. On top — 17 AI agents and a dispatcher; the night shift passes 7 checks and reports in the morning. Every step is saved and can be rolled back. Any AI model works: from Claude to open models on your own server.", "go": "#mini2", "chips": []}, {"id": "privacy", "keys": ["данн", "приватн", "безопасн", "утечк", "конфиденц", "data", "privacy", "security", "leak", "confidential"], "ru": "Для бизнеса данные не уходят наружу: модель выбирает и хостит сам клиент. Ни одно действие не выходит без кнопки «Одобрить», любой шаг можно откатить.", "en": "For business, data never leaves: the client picks and hosts the model. No action goes out without an “Approve” tap, and every step can be rolled back.", "go": "#ceoF", "chips": []}, {"id": "home", "keys": ["один дом", "для людей", "b2c", "личн", "телефон", "telegram", "телеграм", "утр", "one home", "for people", "personal", "phone", "morning"], "ru": "Один дом — NANO для людей. Бросаете мысль, голос или ссылку — я кладу на нужную полку и связываю с остальным. Каждое утро в Telegram — один экран: план, повторение и решения. Free, Pro за $12 в месяц, Studio от $3.", "en": "One Home is NANO for people. Drop a thought, a voice note or a link — I file it on the right shelf and link it to the rest. Every morning in Telegram — one screen: the plan, reviews and decisions. Free, Pro at $12 a month, Studio from $3.", "go": "#home", "chips": []}, {"id": "contact", "keys": ["контакт", "связат", "телефон ильдара", "почт", "вичат", "wechat", "резюме", " cv", "встрет", "позвон", "contact", "in touch", "reach", "email", "phone", "resume", "meet", "call"], "ru": "Ильдар: Ba9azitovIldar@gmail.com · GitHub Matr457. CV на русском и английском — в конце визитки.", "en": "Ildar: Ba9azitovIldar@gmail.com · GitHub Matr457. The CV in English and Russian is at the end of this card.", "go": "#contact", "chips": []}, {"id": "demo", "keys": ["покажи", "демо", "show", "demo", "питч", "pitch"], "ru": "Нажмите «Смотреть историю» на визитке — за минуту покажу главное голосом (полное интервью — 3 минуты). Или попробуйте сами: бросьте мысль в мозг чуть ниже.", "en": "Tap “Watch the story” on the card — I'll show the essence by voice in one minute (the full interview takes 3). Or try it yourself: drop a thought into the brain just below.", "go": "#pitchGo", "chips": []}, {"id": "risk", "keys": ["риск", "честно", "слаб", "проблем", "почему не", "risk", "honest", "weak", "why not"], "ru": "Честно о рисках: продукт для людей ещё не запущен массово, команда пока — Ильдар и 17 ИИ-агентов, первая выручка ждёт ответа клиента. Раунд закрывает ровно это: серверы, продажи и первых людей в команду.", "en": "Honestly, the risks: the product for people isn't launched at scale yet, the team today is Ildar plus 17 AI agents, and the first revenue awaits the client's answer. The round covers exactly that: servers, sales and the first people on the team.", "go": "#funds", "chips": []}, {"id": "thanks", "keys": ["спасиб", "класс", "круто", "впечатл", "thank", "cool", "great", "awesome", "impress"], "ru": "Спасибо! Ильдару можно написать: Ba9azitovIldar@gmail.com.", "en": "Thank you! You can write to Ildar: Ba9azitovIldar@gmail.com.", "go": "#contact", "chips": []}], "fallback": {"id": "fallback", "ru": "Этого я пока не знаю — лучше спросить Ильдара, он рядом. Могу рассказать про сделку, цены, технологию или основателя.", "en": "I don't know that yet — best to ask Ildar, he's right here. I can tell you about the deal, prices, the technology or the founder."}}</script>
+<script>
+// Мозг офлайн-NANO: вопрос → намерение из базы знаний (kb.json). Чистые функции без DOM; тест — tests/brain.test.js.
+// Счёт намерения = сумма длин совпавших ключей: длинный точный ключ («сколько стоит») сильнее короткого («цен»).
+(function (root) {
+  const norm = s => ' ' + String(s).toLowerCase().replace(/ё/g, 'е').replace(/[!?.,;:«»"()]/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+
+  function match(kb, text) {
+    const t = norm(text); let best = null, score = 0;
+    for (const it of kb.intents) {
+      let s = 0;
+      for (const k of it.keys) if (t.includes(norm(k).slice(k.startsWith(' ') ? 0 : 1, k.endsWith(' ') ? undefined : -1))) s += k.trim().length;
+      if (s > score) { score = s; best = it; }
+    }
+    return best || kb.fallback;
+  }
+
+  function reply(kb, text, lang) {
+    const it = match(kb, text), l = lang === 'en' ? 'en' : 'ru';
+    return {id: it.id, text: it[l] || it.ru, card: it.card || null, go: it.go || null, chips: (it.chips || kb.chips).map(c => c[l] || c.ru)};
+  }
+
+  const api = {norm, match, reply};
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.NANO_BRAIN = api;
+})(this);
+
+</script>
+<script>
+// Голос NANO: лучший женский голос браузера. Edge даёт нейросетевые «Natural» (Ava, Emma, Jenny, Aria) — их первыми;
+// Chrome — «Google US English»; Safari/iPhone — Samantha / Ava (Premium). Мужские Natural отсекаются: NANO — она.
+window.NVOICE = (() => {
+  const TTS = window.speechSynthesis;
+  // мужские голоса Edge/Windows (Natural и старые SAPI: David, Mark), macOS/iOS (Alex, Daniel, Fred…)
+  const MALE = /(andrew|brian|guy|christopher|eric|roger|steffan|davis|tony|jason|dmitry|ryan|william|liam|david|mark|george|james|sean|richard|pavel|alex\b|daniel|thomas|fred|aaron|rishi|oliver|arthur|gordon)/i;
+  const PREF = {
+    en: [/ava.*natural/i, /emma.*natural/i, /jenny.*natural/i, /aria.*natural/i, /michelle.*natural/i, /natural/i,
+      /google us english/i, /ava|samantha|zoe|allison|susan|zira/i, /female/i],
+    ru: [/svetlana.*natural/i, /dariya.*natural/i, /natural/i, /google.*(рус|russ)/i, /milena|katya|alena|irina/i, /female/i],
+  };
+  function pick(l) {
+    if (!TTS) return null;
+    const all = TTS.getVoices().filter(v => !MALE.test(v.name));
+    const vs = all.filter(v => v.lang.toLowerCase().startsWith(l)), us = l === 'en' ? vs.filter(v => /^en[-_]us/i.test(v.lang)) : vs;
+    for (const re of PREF[l]) { const v = us.find(x => re.test(x.name)) || vs.find(x => re.test(x.name)); if (v) return v; }
+    return us[0] || vs[0] || null;
+  }
+  const natural = v => !!v && /natural|premium|enhanced|neural/i.test(v.name);
+  // u.rate/pitch: нейроголос звучит лучше без подкрутки; системный — чуть живее
+  function utter(text, l) {
+    const u = new SpeechSynthesisUtterance(text), v = pick(l);
+    u.lang = l === 'en' ? 'en-US' : 'ru-RU'; u.voice = v;
+    u.rate = natural(v) ? 1 : (l === 'en' ? 1.02 : 1.06); u.pitch = natural(v) ? 1 : 1.08;
+    return u;
+  }
+  if (TTS) { TTS.getVoices(); if (TTS.addEventListener) TTS.addEventListener('voiceschanged', () => {}); }
+  return {pick, natural, utter, tts: TTS};
+})();
+
+</script>
+<script>
+// Диалог с NANO: большая фигура + окно реплики в духе VN, 3 варианта + свой вопрос. Только RU/EN.
+// Продукт, сделка, основатель — локальная база (kb.json, факты питча); всё остальное — живой мозг ceo.nineloom.com/nano-api.
+(() => {
+  'use strict';
+  const KB = JSON.parse(document.getElementById('kb').textContent), NB = window.NANO_BRAIN, V = window.NVOICE;
+  const $ = s => document.querySelector(s), el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  const API = {health: 'https://ceo.nineloom.com/nano-api/health', ask: 'https://ceo.nineloom.com/nano-api/ask'};
+  const NUM = {NOTES: 2387, LINKS: 23892, COMMITS: 1374};
+  const GENERIC = new Set(['what', 'tech', 'papers']);
+  const ABOUT = /\b(nano|you|your|yours|yourself|product)\b|ты |тебя|тебе|твой|твоя|вы |вас |ваш|продукт|ильдар|ildar/i;
+  const POSES = ['hello', 'love', 'ok', 'laugh', 'think', 'facepalm', 'wow', 'wink', 'idea', 'cool', 'done', 'run'];
+  // смысл ответа (id намерения в kb.json) → поза из TG-набора TOP12
+  const MOOD = {greet: 'hello', thanks: 'love', what: 'idea', round: 'ok', next: 'run', funds: 'cool', money: 'ok', ceo: 'cool', teacher: 'idea',
+    founder: 'wink', proof: 'done', revenue: 'ok', compete: 'cool', papers: 'think', tech: 'idea', privacy: 'ok', home: 'wink', contact: 'hello',
+    demo: 'wow', risk: 'think'};
+  // живые ответы мозга: поза по словам вопроса, иначе «идея»
+  const LIVE_MOOD = [[/шутк|смешн|анекдот|joke|funny|haha|lol|хах/i, 'laugh'], [/вау|круто|удиви|невероятн|wow|amazing|incredible/i, 'wow'],
+    [/люб|нрав|спасиб|благодар|love|thank/i, 'love'], [/как дела|how are you|подмигн/i, 'wink']];
+  const liveMood = q => { for (const [re, m] of LIVE_MOOD) if (re.test(q)) return m; return 'idea'; };
+  const DOT = {RED: '#ff7a8a', BLUE: '#7b9bff', GREEN: '#7be0a4', LIGHT_BLUE: '#8fd6ff', TEAL: '#5fe0d0', LIGHT_RED: '#ffb4a8',
+    PINK: '#ff9bd8', PURPLE: '#b9a6ff', ORANGE: '#ffb86b', YELLOW: '#ffe79a', GOLD: '#ffd36b'};
+  const INITIAL = [0, 1, 2];  // сколько просите · что мозг знает про PageRank · кто основатель (индексы KB.chips)
+
+  const S = {
+    en: {on: 'Live brain', off: 'Brain offline', you: 'You', own: 'Ask me anything…', speaking: 'Speaking…', ready: 'Ready', think: 'Thinking…', hear: 'Listening…',
+      log: 'Log', mic: 'Voice', logT: 'Conversation', head: 'The brain', from: 'From the brain', notes: 'notes', links: 'links',
+      hint: 'Ask anything, from math to management. I’ll show the notes behind every answer.',
+      fillers: ['Hmm, let me check my notes…', 'Good one — digging through my brain…', 'One sec, I’m looking that up…'],
+      cjk: 'I speak English and Russian for now — 中文 is coming soon. Could you ask in one of those?',
+      lost: 'I lost the line to my brain for a second. Ask me about the deal, the product or Ildar — that I know by heart.',
+      nomic: 'This browser can’t hear me yet — please type your question.',
+      more: t => `Tell me about “${t}”`},
+    ru: {on: 'Живой мозг', off: 'Мозг не на связи', you: 'Вы', own: 'Спросите что угодно…', speaking: 'Говорю…', ready: 'Готова', think: 'Думаю…', hear: 'Слушаю…',
+      log: 'Лог', mic: 'Голос', logT: 'Разговор', head: 'Мозг', from: 'Из мозга', notes: 'заметок', links: 'связей',
+      hint: 'Спросите что угодно, от математики до менеджмента. Я покажу заметки, на которых стоит ответ.',
+      fillers: ['Хм, сейчас загляну в заметки…', 'Хороший вопрос — копаюсь в мозге…', 'Секунду, ищу…'],
+      cjk: 'Пока я говорю по-русски и по-английски — 中文 скоро. Спросите, пожалуйста, на одном из них?',
+      lost: 'Связь с мозгом на секунду пропала. Спросите про сделку, продукт или Ильдара — это я знаю наизусть.',
+      nomic: 'Этот браузер меня пока не слышит — напишите вопрос.',
+      more: t => `Расскажи про «${t}»`},
+  };
+
+  const INVESTOR_EN = new URLSearchParams(location.search).get('mode') !== 'product';   // без параметра — прежняя ссылка инвестора (только английский, без переключателя, слово оператора 17.11); ?mode=product — продукт: RU по умолчанию + переключатель (его открывает Engine)
+  document.body.classList.toggle('investor-en', INVESTOR_EN);
+  const state = {lang: INVESTOR_EN ? 'en' : 'ru', sound: true, busy: false, unlocked: false, live: false, history: [], asked: new Set(), last: '', src: null};
+  try { const q = new URLSearchParams(location.search).get('lang'), s = localStorage.getItem('nano-talk-lang'); state.lang = INVESTOR_EN ? 'en' : q === 'ru' || q === 'en' ? q : (s === 'en' ? 'en' : 'ru'); } catch (e) {}
+  try { state.sound = localStorage.getItem('nano-talk-sound') !== '0'; } catch (e) {}
+
+  const fmt = (n, l) => n.toLocaleString(l === 'ru' ? 'ru-RU' : 'en-US');
+  const fill = (t, l) => t.replace(/\{(NOTES|LINKS|COMMITS)\}/g, (_, k) => fmt(NUM[k], l));
+  const T = () => S[state.lang];
+  const tr = o => o[state.lang] || o.ru;
+  const stage = $('#stage');
+
+  // ---------- настроение: два слоя стикера, перетекание ----------
+  const A = $('#stkA'), B = $('#stkB'); let top = A, cur = 'hello';
+  function setMood(m) {
+    if (!POSES.includes(m) || m === cur) return;
+    const nxt = top === A ? B : A; nxt.src = `av/${m}.webp`;
+    const swap = () => { nxt.classList.add('on'); top.classList.remove('on'); top = nxt; cur = m; };
+    if (nxt.decode) nxt.decode().then(swap, swap); else swap();
+  }
+  POSES.forEach(p => { new Image().src = `av/${p}.webp`; });
+
+  // ---------- голос ----------
+  let gen = 0, pending = 0;
+  function status() {
+    const c = stage.classList;
+    $('#status').textContent = c.contains('listening') ? T().hear : c.contains('speaking') ? T().speaking : state.busy ? T().think : T().ready;
+  }
+  const setSpeaking = on => { stage.classList.toggle('speaking', on); status(); };
+  function cancelSpeech() { gen++; pending = 0; if (V && V.tts) V.tts.cancel(); setSpeaking(false); }
+  function say(text, lang, cb = {}) {
+    if (!state.sound || !state.unlocked || !V || !V.tts) return false;
+    const g = gen, u = V.utter(text, lang); pending++;
+    u.onstart = () => { if (g === gen) { setSpeaking(true); if (cb.onstart) cb.onstart(); } };
+    const fin = () => { if (g !== gen) return; pending = Math.max(0, pending - 1); if (!pending) setSpeaking(false); if (cb.onend) cb.onend(); };
+    u.onend = fin; u.onerror = fin; V.tts.speak(u); return true;
+  }
+
+  // ---------- печатная машинка ----------
+  let tt = 0;
+  function typeInto(node, text, cps) {
+    clearInterval(tt); node.textContent = ''; const caret = el('span', 'caret'), box = node.parentElement; let i = 0, acc = 0;
+    tt = setInterval(() => {
+      acc += cps * 0.033; const k = Math.floor(acc); acc -= k; i = Math.min(text.length, i + k);
+      node.textContent = text.slice(0, i);
+      if (i < text.length) node.append(caret); else clearInterval(tt);
+      box.scrollTop = box.scrollHeight;
+    }, 33);
+  }
+  function finishTyping() { clearInterval(tt); const n = $('#say'); if (state.last && !n.classList.contains('think')) n.textContent = state.last; }
+  function showLine(text, voice) {
+    const n = $('#say'); state.last = text; n.className = 'say' + (text.length > 360 ? ' long' : text.length > 190 ? ' mid' : '');
+    let started = false, voiced = false;
+    const start = () => { if (started) return; started = true; typeInto(n, text, voiced ? (state.lang === 'ru' ? 14.5 : 16) : 42); };
+    voiced = voice && say(text, state.lang, {onstart: start});
+    if (voiced) setTimeout(start, 1800); else start();
+    $('#play').classList.remove('pulse');
+  }
+  function showThinking(text) {
+    const n = $('#say'); clearInterval(tt); n.className = 'say think'; n.textContent = text ? text + ' ' : '';
+    const d = el('span', 'dots'); d.append(el('span'), el('span'), el('span')); n.append(d);
+  }
+
+  // ---------- мозг: карточка источников ----------
+  const title = (s, l) => {
+    s = s.replace(/^(hub|хаб|moc)\s*[:—-]\s*/i, ''); const m = s.match(/^(.+?)\s*\(([^()]+)\)\s*$/);
+    s = m ? (l === 'en' && /^[\x20-\x7e]+$/.test(m[2]) ? m[2] : m[1]) : s;
+    return s.length > 56 ? s.slice(0, 55).replace(/\s+\S*$/, '') + '…' : s;
+  };
+  function renderBrain() {
+    const b = $('#brain'), t = T(), src = state.src; b.textContent = '';
+    const row = el('div', 'row'); row.append(el('span', '', src ? t.from : t.head), el('em', '', `${fmt(NUM.NOTES, state.lang)} ${t.notes} · ${fmt(NUM.LINKS, state.lang)} ${t.links}`)); b.append(row);
+    if (!src) { b.append(el('p', 'hint', t.hint)); return; }
+    const ul = el('ul');
+    src.slice(0, 4).forEach((s, i) => { const li = el('li'), d = el('i'); d.style.background = DOT[s.c] || '#b9a6ff'; li.style.animationDelay = i * 90 + 'ms'; li.append(d, el('span', '', title(s.t, state.lang))); ul.append(li); });
+    b.append(ul);
+  }
+
+  // ---------- варианты ответа ----------
+  function pool() {
+    const l = state.lang, seen = new Set(), out = [];
+    const add = c => { const s = c[l] || c.ru, k = NB.norm(s); if (!seen.has(k)) { seen.add(k); out.push(s); } };
+    KB.chips.forEach(add); KB.intents.forEach(it => (it.chips || []).forEach(add)); return out;
+  }
+  function initialOptions() { const p = pool(); return INITIAL.map(i => ({q: p[i]})).filter(o => o.q); }
+  function nextOptions(chips, src) {
+    const out = [], ok = s => s && !state.asked.has(NB.norm(s)) && !out.some(o => NB.norm(o.q) === NB.norm(s));
+    if (src) src.slice(1).forEach(s => { const t = title(s.t, state.lang); if (out.length < 2 && (state.lang === 'ru' || /^[\x20-\x7e]+$/.test(t))) { const q = T().more(t); if (ok(q)) out.push({q, live: true}); } });
+    [...(chips || []), ...pool()].forEach(s => { if (out.length < 3 && ok(s)) out.push({q: s}); });
+    return out;
+  }
+  function setOptions(list) {
+    const ch = $('#ch'), t = T(); ch.textContent = '';
+    list.slice(0, 3).forEach((o, i) => {
+      const b = el('button', 'opt'); b.type = 'button'; b.dataset.q = o.q; if (o.live) b.dataset.live = '1'; b.disabled = state.busy;
+      b.append(el('span', 'n', String(i + 1)), el('span', 't', o.q)); ch.append(b);
+    });
+    const f = el('form', 'opt own'); f.autocomplete = 'off';
+    const inp = el('input'); inp.id = 'own'; inp.type = 'text'; inp.maxLength = 400; inp.placeholder = t.own; inp.setAttribute('aria-label', t.own); inp.enterKeyHint = 'send';
+    const mic = el('button', 'ib'); mic.type = 'button'; mic.id = 'mic'; mic.setAttribute('aria-label', t.mic); mic.innerHTML = '<svg class="i"><use href="#i-mic"/></svg>';
+    const go = el('button', 'ib go'); go.type = 'submit'; go.setAttribute('aria-label', 'Send'); go.innerHTML = '<svg class="i"><use href="#i-send"/></svg>';
+    f.append(el('span', 'n', '4'), inp, mic, go); ch.append(f);
+    f.addEventListener('submit', e => { e.preventDefault(); const v = inp.value; inp.value = ''; ask(v); });
+    mic.addEventListener('click', listen);
+  }
+
+  // ---------- вопрос → ответ ----------
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function tidy(t) {
+    t = String(t).replace(/[*_`#]+/g, '').replace(/\s+/g, ' ').trim();
+    if (t && !/[.!?…»”)"]$/.test(t)) { const i = Math.max(t.lastIndexOf('. '), t.lastIndexOf('! '), t.lastIndexOf('? ')); t = i > 40 ? t.slice(0, i + 1) : t + '…'; }
+    return t;
+  }
+  function live(q, lang) {
+    const ctl = window.AbortController ? new AbortController() : null, to = setTimeout(() => ctl && ctl.abort(), 25000);
+    return fetch(API.ask, {method: 'POST', headers: {'Content-Type': 'text/plain;charset=utf-8'}, body: JSON.stringify({q: q.slice(0, 400), lang}), signal: ctl ? ctl.signal : undefined})
+      .then(r => r.json()).finally(() => clearTimeout(to));
+  }
+  // шлюз LLM иногда отвечает 502 с первого раза — один тихий повтор, если отказ пришёл быстро
+  async function liveRetry(q, lang) {
+    for (let k = 0; k < 2; k++) {
+      const t0 = Date.now(), j = await live(q, lang).catch(() => null);
+      if (j && (j.ok || j.text)) return j;
+      if (Date.now() - t0 > 10000) break;
+      await sleep(600);
+    }
+    return null;
+  }
+  function detect(q) {
+    if (INVESTOR_EN) return;
+    const cyr = /[а-яё]/i.test(q), lat = /[a-z]/i.test(q);
+    if (state.lang === 'en' && cyr) setLang('ru', true); else if (state.lang === 'ru' && !cyr && lat && /\s/.test(q.trim())) setLang('en', true);
+  }
+  function push(role, text) { state.history.push({role, text}); renderLog(); }
+
+  async function ask(raw, forceLive) {
+    const q = String(raw || '').trim(); if (!q || state.busy) return;
+    state.busy = true; state.unlocked = true; document.querySelectorAll('#ch button.opt').forEach(b => { b.disabled = true; });
+    cancelSpeech(); clearInterval(tt); detect(q);
+    const lang = state.lang; state.asked.add(NB.norm(q)); push('you', q); status();
+    $('#ask').textContent = ''; $('#ask').append(el('b', '', T().you), document.createTextNode(q));
+    let text, mood = 'idea', chips = null, src = null;
+    if (/[぀-ヿ㐀-鿿가-힯]/.test(q)) { showThinking(''); await sleep(380); text = T().cjk; mood = 'hello'; }
+    else {
+      const loc = NB.reply(KB, q, lang), useLive = forceLive || loc.id === 'fallback' || (GENERIC.has(loc.id) && !ABOUT.test(q));
+      if (!useLive) { showThinking(''); await sleep(520); text = fill(loc.text, lang); mood = MOOD[loc.id] || 'idea'; chips = loc.chips; }
+      else {
+        const f = T().fillers[Math.floor(Math.random() * T().fillers.length)]; showThinking(f); setMood('think'); mood = liveMood(q);
+        const fdone = new Promise(r => { if (!say(f, lang, {onend: r})) r(); });
+        const j = await liveRetry(q, lang); await Promise.race([fdone, sleep(3200)]);
+        if (j && j.ok && j.text) { text = tidy(j.text); src = j.src && j.src.length ? j.src : null; }
+        else if (j && j.text) text = tidy(j.text);
+        else { text = T().lost; mood = 'facepalm'; }
+      }
+    }
+    state.busy = false; if (src) { state.src = src; renderBrain(); }
+    push('nano', text); setMood(mood); showLine(text, true); setOptions(nextOptions(chips, src)); status();
+  }
+
+  // ---------- микрофон ----------
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition; let rec = null;
+  function listen() {
+    state.unlocked = true;
+    if (!SR) { showLine(T().nomic, false); return; }
+    if (rec) { rec.stop(); return; }
+    cancelSpeech(); rec = new SR(); rec.lang = state.lang === 'ru' ? 'ru-RU' : 'en-US'; rec.interimResults = true; rec.maxAlternatives = 1;
+    let text = '', heard = false; const inp = $('#own');
+    rec.onstart = () => { stage.classList.add('listening'); status(); };
+    rec.onresult = e => { text = ''; for (const r of e.results) text += r[0].transcript; heard = true; if (inp) inp.value = text; };
+    rec.onend = () => { stage.classList.remove('listening'); rec = null; status(); if (heard && text.trim()) { if (inp) inp.value = ''; ask(text); } };
+    rec.onerror = () => { stage.classList.remove('listening'); };
+    try { rec.start(); } catch (e) { rec = null; }
+  }
+
+  // ---------- лог ----------
+  function renderLog() {
+    const l = $('#logList'); l.textContent = '';
+    state.history.forEach(m => { const d = el('div', 'm ' + m.role); d.append(el('b', '', m.role === 'you' ? T().you : 'NANO'), document.createTextNode(m.text)); l.append(d); });
+    l.scrollTop = l.scrollHeight;
+  }
+  function toggleLog(open) { $('#log').classList.toggle('open', open); if (open) renderLog(); }
+
+  // ---------- язык и звук ----------
+  function setLang(l, keep) {
+    if (INVESTOR_EN) l = 'en';
+    state.lang = l; document.documentElement.lang = l; try { localStorage.setItem('nano-talk-lang', l); } catch (e) {}
+    $('#lEn').classList.toggle('on', l === 'en'); $('#lRu').classList.toggle('on', l === 'ru');
+    const t = T(); $('#qLogT').textContent = t.log; $('#qMicT').textContent = t.mic; $('#logT').textContent = t.logT;
+    $('#stateTx').textContent = state.live ? t.on : t.off; status(); renderBrain();
+    if (keep) return;
+    if (state.history.length) setOptions(nextOptions(null, null)); else welcome();
+  }
+  function setSound(on) {
+    state.sound = on; try { localStorage.setItem('nano-talk-sound', on ? '1' : '0'); } catch (e) {}
+    $('#snd').classList.toggle('off', !on); $('#snd').setAttribute('aria-pressed', String(on)); if (!on) cancelSpeech();
+  }
+  function welcome() {
+    cancelSpeech(); $('#ask').textContent = ''; setMood('hello'); showLine(fill(tr(KB.welcome), state.lang), false);
+    setOptions(initialOptions()); $('#play').classList.add('pulse');
+  }
+
+  // ---------- события ----------
+  const unlock = () => { state.unlocked = true; };
+  document.addEventListener('pointerdown', unlock, {capture: true});
+  document.addEventListener('keydown', unlock, {capture: true});
+  $('#ch').addEventListener('click', e => { const b = e.target.closest('button.opt'); if (b && !b.disabled) ask(b.dataset.q, !!b.dataset.live); });
+  $('#lEn').addEventListener('click', () => setLang('en'));
+  $('#lRu').addEventListener('click', () => setLang('ru'));
+  $('#snd').addEventListener('click', () => setSound(!state.sound));
+  $('#qLog').addEventListener('click', () => toggleLog(!$('#log').classList.contains('open')));
+  $('#logX').addEventListener('click', () => toggleLog(false));
+  $('#qMic').addEventListener('click', listen);
+  $('#box').addEventListener('click', e => { if (!e.target.closest('button')) finishTyping(); });
+  $('#play').addEventListener('click', () => { cancelSpeech(); if (state.last) say(state.last, state.lang); $('#play').classList.remove('pulse'); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { toggleLog(false); return; }
+    const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+    if (e.key >= '1' && e.key <= '3') { const b = document.querySelectorAll('#ch button.opt')[+e.key - 1]; if (b && !b.disabled) ask(b.dataset.q, !!b.dataset.live); }
+    else if (e.key === '4' || e.key === '/' || e.key === 'Enter') { e.preventDefault(); const i = $('#own'); if (i) i.focus(); }
+  });
+
+  // ---------- старт ----------
+  for (let i = 0; i < 26; i++) { const b = el('i'); b.style.setProperty('--h', 6 + Math.round(Math.abs(Math.sin(i * 1.7)) * 14) + 'px'); b.style.animationDelay = (i % 7) * 0.09 + 's'; $('#bars').append(b); }
+  setSound(state.sound); setLang(state.lang);
+  fetch(API.health, {cache: 'no-store'}).then(r => (r.ok ? r.json() : null)).then(j => {
+    state.live = !!(j && j.llm); $('#meta').classList.toggle('live', state.live); $('#stateTx').textContent = state.live ? T().on : T().off;
+  }).catch(() => {});
+  window.NANO_TALK = {ask, state, setLang, setMood};  // для QA
+})();
+
+</script>
+</body>
+</html>
