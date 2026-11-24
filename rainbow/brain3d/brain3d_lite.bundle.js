@@ -3,11 +3,12 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
  * Один файл, зависимость — глобальный THREE (r187, site/brain3d/three.min.js) и window.BRAIN3D_LITE_DATA (brain3d_lite_data.js).
  *
  *   const b = Brain3D.mount(el, {mode:'bg'|'play', count:500|1000|2000, avatars:{PINK:'url'}, labels:true, lang:'ru'|'en'|'zh'});
- *   → { setMode(m), setCount(n), destroy(), on(event, fn), renderAt(ms), stats() }
+ *   → { setMode(m), setCount(n), destroy(), on(event, fn), renderAt(ms), stats(), set(slider, v), preset(name), solo(ci), drawer(bool) }
  *   события: 'ready' · 'mode' · 'count' · 'select' {cluster, index, action:'push'|'pop'} · 'pop'
  *
  * bg   — МЕГА-ШАР: 9 цветов = 9 светящихся каркасных подшаров, ядро VIOLET в центре; медленное вращение, без физики.
- * play — ПЛОТНЫЙ ШАР: 500/1000/2000 глянцевых шаров по цветам (эталон PERFECT.jpg); физика только в Worker (Blob).
+ * play — ЗВЁЗДНОЕ СКОПЛЕНИЕ (24.11): 500/1000/2000 звёзд (аддитивные спрайты с ореолом и лучами, разная величина) по цветам, туманности доменов,
+ *        камера издалека по авто-кадру; справа панель настроек: 4 режима, домены (соло), 13 ползунков вида и физики, оболочка/облако; физика только в Worker (Blob).
  * Рецепт без лагов: раскладка посчитана при сборке (build.py), WebGL2 без MSAA, DPR ≤ 2, instancing, кадр только по изменению
  * (автовращение ≤ 30 fps), пауза на скрытой вкладке и вне экрана, prefers-reduced-motion = статичный кадр.
  * В данных нет названий нот, id и путей; личные цвета (pub:false) без имени, подписи и счётчика.
@@ -19,9 +20,32 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
 
   /* ---------- тексты ---------- */
   const T = {
-    ru: { cnt: 'Шаров', force: 'Сила', link: 'Длина связи', shell: 'оболочка', cloud: 'облако', reset: 'Сброс', hint: 'тяни — вращать · клик — толкнуть · двойной клик — лопнуть', notes: (n) => n + ' ' + plural(n, 'нота', 'ноты', 'нот') },
-    en: { cnt: 'Balls', force: 'Force', link: 'Link length', shell: 'shell', cloud: 'cloud', reset: 'Reset', hint: 'drag to rotate · click to push · double-click to pop', notes: (n) => n + ' notes' },
-    zh: { cnt: '球数', force: '力度', link: '连线长度', shell: '外壳', cloud: '云', reset: '重置', hint: '拖动旋转 · 点击推开 · 双击戳破', notes: (n) => n + ' 条笔记' },
+    ru: { cnt: 'Вершин', title: 'Настройки', view: 'Вид', phys: 'Физика', doms: 'Домены', modes: 'Режимы', shell: 'оболочка', cloud: 'облако', reset: 'Сброс', all: 'Все домены', labels: 'Подписи доменов',
+      hint: 'тяни — вращать · клик — толкнуть · двойной клик — погасить звезду',
+      p: { calm: 'Покой', swarm: 'Рой', crystal: 'Кристалл', nebula: 'Туманность' },
+      s: { star: 'Размер звёзд', glow: 'Свечение', tw: 'Мерцание', lk: 'Яркость связей', dist: 'Дистанция камеры', rot: 'Вращение', link: 'Жёсткость связей', coh: 'Притяжение доменов', len: 'Длина связей', grav: 'Тяга к центру', visc: 'Вязкость', heat: 'Температура', body: 'Размер тел' },
+      notes: (n) => n + ' ' + plural(n, 'нота', 'ноты', 'нот') },
+    en: { cnt: 'Vertices', title: 'Settings', view: 'View', phys: 'Physics', doms: 'Domains', modes: 'Modes', shell: 'shell', cloud: 'cloud', reset: 'Reset', all: 'All domains', labels: 'Domain labels',
+      hint: 'drag — rotate · click — push · double-click — put a star out',
+      p: { calm: 'Calm', swarm: 'Swarm', crystal: 'Crystal', nebula: 'Nebula' },
+      s: { star: 'Star size', glow: 'Glow', tw: 'Twinkle', lk: 'Link brightness', dist: 'Camera distance', rot: 'Rotation', link: 'Link stiffness', coh: 'Domain pull', len: 'Link length', grav: 'Pull to centre', visc: 'Viscosity', heat: 'Temperature', body: 'Body size' },
+      notes: (n) => n + ' notes' },
+    zh: { cnt: '顶点数', title: '设置', view: '视图', phys: '物理', doms: '领域', modes: '预设', shell: '外壳', cloud: '星云', reset: '重置', all: '全部领域', labels: '领域标签',
+      hint: '拖动旋转 · 点击推开 · 双击熄灭星点',
+      p: { calm: '平静', swarm: '蜂群', crystal: '晶体', nebula: '星云' },
+      s: { star: '星点大小', glow: '光晕', tw: '闪烁', lk: '连线亮度', dist: '相机距离', rot: '旋转', link: '连线刚度', coh: '领域引力', len: '连线长度', grav: '向心力', visc: '黏度', heat: '温度', body: '体积' },
+      notes: (n) => n + ' 条笔记' },
+  };
+  /* ползунки: [ключ, группа, min, max, по умолчанию, формат]; группа view — рисовалка (мгновенно), phys — физика в Worker */
+  const SLIDERS = [
+    ['star', 'view', 40, 220, 100, 'p'], ['glow', 'view', 0, 200, 100, 'p'], ['tw', 'view', 0, 100, 45, 'p'], ['lk', 'view', 0, 200, 100, 'p'], ['dist', 'view', 100, 320, 140, 'x'], ['rot', 'view', 0, 40, 11, 'r'],
+    ['link', 'phys', 0, 100, 40, 'p'], ['coh', 'phys', 0, 100, 40, 'p'], ['len', 'phys', 40, 300, 100, 'p'], ['grav', 'phys', 0, 100, 50, 'p'], ['visc', 'phys', 2, 60, 14, 'p'], ['heat', 'phys', 0, 100, 0, 'p'], ['body', 'phys', 40, 200, 85, 'p'],
+  ];
+  const PRESETS = {   // значения ползунков (ключ → число в единицах ползунка) + оболочка/облако: пресет = физика + вид
+    calm: { link: 40, coh: 40, len: 100, grav: 50, visc: 14, heat: 0, body: 85, shell: 1, lk: 100, glow: 100, tw: 45, star: 100 },
+    swarm: { link: 12, coh: 12, len: 160, grav: 30, visc: 5, heat: 38, body: 70, shell: 0, lk: 70, glow: 90, tw: 70, star: 100 },
+    crystal: { link: 90, coh: 75, len: 60, grav: 70, visc: 30, heat: 0, body: 100, shell: 1, lk: 140, glow: 70, tw: 15, star: 110 },
+    nebula: { link: 8, coh: 6, len: 300, grav: 3, visc: 8, heat: 26, body: 120, shell: 0, lk: 28, glow: 120, tw: 55, star: 80 },
   };
   function plural(n, a, b, c) { const m = n % 10, k = n % 100; return m === 1 && k !== 11 ? a : m >= 2 && m <= 4 && (k < 12 || k > 14) ? b : c; }
 
@@ -50,34 +74,39 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
 
   /* ---------- физика (исполняется в Worker; запасной путь — главный поток) ---------- */
   function makeSim(post) {
-    let N = 0, P, V, F, Q, R, C, E, NE = 0, alive, run = false, quiet = 0, age = 0, timer = 0, maxR = 0.1, kinds = 9;
-    let par = { strength: 0.4, len: 1, shell: true };
+    let N = 0, P, V, F, Q, R, R0, C, E, NE = 0, alive, run = false, quiet = 0, age = 0, timer = 0, maxR = 0.1, kinds = 9;
+    // link — жёсткость пружин-связей, coh — притяжение к центру своего домена, len — длина связи, grav — тяга к центру, visc — вязкость (доля скорости, что гасится за шаг),
+    // heat — тепловое дрожание (при heat > 0 сцена не засыпает), body — множитель размеров тел (радиусы столкновений)
+    let par = { link: 0.4, coh: 0.4, len: 1, shell: true, grav: 0.5, visc: 0.14, heat: 0, body: 0.85 };
     let head, nxt, dim = 1, cell = 0.2;
     const CX = new Float32Array(32 * 3), CN = new Float32Array(32);
-    const LIM = 1.7;
+    const LIM = 1.7, BODY_MAX = 2.1;
+    function regrid() {   // радиусы изменились (ползунок «Размер тел») — сетка столкновений под новый максимум
+      maxR = 0; for (let i = 0; i < N; i++) { R[i] = alive[i] ? R0[i] * par.body : 0; if (R[i] > maxR) maxR = R[i]; }
+      cell = 2.05 * Math.max(maxR, 0.01); dim = Math.ceil((2 * LIM) / cell) + 1; head = new Int32Array(dim * dim * dim);
+    }
     function init(m) {
-      N = m.n; P = new Float32Array(m.pos); R = new Float32Array(m.rad); C = new Uint8Array(m.cl); E = new Uint16Array(m.e); NE = E.length >> 1;
-      V = new Float32Array(3 * N); F = new Float32Array(3 * N); Q = new Float32Array(3 * N); alive = new Uint8Array(N).fill(1);
-      maxR = 0; for (let i = 0; i < N; i++) if (R[i] > maxR) maxR = R[i];
-      cell = 2.05 * maxR; dim = Math.ceil((2 * LIM) / cell) + 1; head = new Int32Array(dim * dim * dim); nxt = new Int32Array(N);
-      par = Object.assign(par, m.par || {}); run = false; clearTimeout(timer);
+      N = m.n; P = new Float32Array(m.pos); R0 = new Float32Array(m.rad); R = new Float32Array(N); C = new Uint8Array(m.cl); E = new Uint16Array(m.e); NE = E.length >> 1;
+      V = new Float32Array(3 * N); F = new Float32Array(3 * N); Q = new Float32Array(3 * N); alive = new Uint8Array(N).fill(1); nxt = new Int32Array(N);
+      par = Object.assign(par, m.par || {}); regrid(); run = false; clearTimeout(timer);
     }
     function step() {
-      const s = 0.12 + 1.7 * par.strength, shell = par.shell, rest = shell ? par.len : par.len * 2.8, wall = shell ? Math.min(1.7, Math.max(0.94, Math.pow(par.len, 0.55))) : 9;
+      const sl = 0.12 + 1.7 * par.link, sc = 0.12 + 1.7 * par.coh, shell = par.shell, rest = shell ? par.len : par.len * 2.8, wall = shell ? Math.min(1.7, Math.max(0.94, Math.pow(par.len, 0.55))) : 9;
+      const gk = (shell ? 0.0012 : 0.0016) * 2 * par.grav, dmp = 1 - par.visc, hot = par.heat * 0.008;
       CX.fill(0); CN.fill(0);
       for (let i = 0; i < N; i++) { if (!alive[i]) continue; const c = C[i]; CX[3 * c] += P[3 * i]; CX[3 * c + 1] += P[3 * i + 1]; CX[3 * c + 2] += P[3 * i + 2]; CN[c]++; }
       for (let c = 0; c < kinds; c++) if (CN[c]) { CX[3 * c] /= CN[c]; CX[3 * c + 1] /= CN[c]; CX[3 * c + 2] /= CN[c]; }
-      const kc = (shell ? 0.003 : 0.008) * s;
+      const kc = (shell ? 0.003 : 0.008) * sc;
       for (let i = 0; i < N; i++) {
         if (!alive[i]) { F[3 * i] = F[3 * i + 1] = F[3 * i + 2] = 0; continue; }
         const x = P[3 * i], y = P[3 * i + 1], z = P[3 * i + 2], c = C[i];
         let fx = (CX[3 * c] - x) * kc, fy = (CX[3 * c + 1] - y) * kc, fz = (CX[3 * c + 2] - z) * kc;
         const r = Math.sqrt(x * x + y * y + z * z) + 1e-6;
-        if (shell) { const lim = wall - R[i]; if (r > lim) { const k = (r - lim) * 0.5 / r; fx -= x * k; fy -= y * k; fz -= z * k; } fx -= x * 0.0012; fy -= y * 0.0012; fz -= z * 0.0012; }
-        else { const k = 0.0016; fx -= x * k; fy -= y * k; fz -= z * k; }
+        if (shell) { const lim = wall - R[i]; if (r > lim) { const k = (r - lim) * 0.5 / r; fx -= x * k; fy -= y * k; fz -= z * k; } }
+        fx -= x * gk; fy -= y * gk; fz -= z * gk;
         F[3 * i] = fx; F[3 * i + 1] = fy; F[3 * i + 2] = fz;
       }
-      const ks = (shell ? 0.010 : 0.060) * s;
+      const ks = (shell ? 0.010 : 0.060) * sl;
       for (let e = 0; e < NE; e++) {
         const i = E[2 * e], j = E[2 * e + 1]; if (!alive[i] || !alive[j]) continue;
         const dx = P[3 * j] - P[3 * i], dy = P[3 * j + 1] - P[3 * i + 1], dz = P[3 * j + 2] - P[3 * i + 2];
@@ -87,7 +116,8 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       for (let i = 0; i < N; i++) {
         if (!alive[i]) continue;
         const a = 3 * i; Q[a] = P[a]; Q[a + 1] = P[a + 1]; Q[a + 2] = P[a + 2];
-        V[a] = (V[a] + F[a]) * 0.86; V[a + 1] = (V[a + 1] + F[a + 1]) * 0.86; V[a + 2] = (V[a + 2] + F[a + 2]) * 0.86;
+        V[a] = (V[a] + F[a]) * dmp; V[a + 1] = (V[a + 1] + F[a + 1]) * dmp; V[a + 2] = (V[a + 2] + F[a + 2]) * dmp;
+        if (hot > 0) { V[a] += (Math.random() - 0.5) * hot; V[a + 1] += (Math.random() - 0.5) * hot; V[a + 2] += (Math.random() - 0.5) * hot; }
         P[a] += V[a]; P[a + 1] += V[a + 1]; P[a + 2] += V[a + 2];
       }
       let moved = 0;
@@ -126,7 +156,7 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
     function tick() {
       if (!run) return;
       step(); step();
-      age++; if (quiet > 24 || age > 360) { run = false; flush(false); return; }   // тише порога или 6 с — спим
+      age++; if (par.heat <= 0 && (quiet > 24 || age > 360)) { run = false; flush(false); return; }   // тише порога или 6 с — спим; с температурой — живём
       flush(true); timer = setTimeout(tick, 16);
     }
     function wake() { quiet = 0; age = 0; if (!run && N) { run = true; clearTimeout(timer); timer = setTimeout(tick, 0); } }
@@ -140,9 +170,9 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
     }
     return function (m) {
       if (m.t === 'init') init(m);
-      else if (m.t === 'params') { par = Object.assign(par, m.par); wake(); }
+      else if (m.t === 'params') { const b = par.body; par = Object.assign(par, m.par); if (par.body !== b) regrid(); wake(); }
       else if (m.t === 'kick') { const i = m.i; if (i < N && alive[i]) { V[3 * i] += m.dir[0] * 0.05; V[3 * i + 1] += m.dir[1] * 0.05; V[3 * i + 2] += m.dir[2] * 0.05; burst(i, 0.04, 5); wake(); } }
-      else if (m.t === 'pop') { const i = m.i; if (i < N && alive[i]) { burst(i, 0.05, 5); alive[i] = 0; R[i] = 0; wake(); } }
+      else if (m.t === 'pop') { const i = m.i; if (i < N && alive[i]) { burst(i, 0.05, 5); alive[i] = 0; R[i] = 0; R0[i] = 0; wake(); } }
       else if (m.t === 'stop') { run = false; clearTimeout(timer); }
     };
   }
@@ -170,16 +200,25 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
   const GLOW_VS = `uniform float uSize; varying vec2 vUv; void main(){ vUv = uv * 2.0 - 1.0; vec4 mv = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0); mv.xy += position.xy * uSize; gl_Position = projectionMatrix * mv; }`;
   const GLOW_FS = `varying vec2 vUv; uniform vec3 uCol; uniform float uGain;
     void main(){ float d = length(vUv); if (d > 1.0) discard; float g = exp(-d * d * 3.2) * (1.0 - d * d); vec3 c = uCol * g * uGain; gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0) * 0.6); }`;
-  const BALL_VS = `attribute vec3 iPos; attribute float iRad; attribute vec3 iCol; attribute float iScale; attribute vec3 bary; uniform float uHover;
-    varying vec3 vN; varying vec3 vV; varying vec3 vCol; varying vec3 vB; varying float vHot;
-    void main(){ vec3 lp = iPos + position * iRad * iScale; vec4 mv = modelViewMatrix * vec4(lp, 1.0); gl_Position = projectionMatrix * mv;
-      vN = normalize(normalMatrix * position); vV = -mv.xyz; float h = fract(sin(float(gl_InstanceID) * 12.9898) * 43758.5453), tn = h * 2.0 - 1.0; vCol = tn > 0.0 ? mix(iCol, vec3(1.0), tn * 0.30) : iCol * (1.0 + tn * 0.30); vB = bary; vHot = float(gl_InstanceID) == uHover ? 1.0 : 0.0; }`;
-  const BALL_FS = `varying vec3 vN; varying vec3 vV; varying vec3 vCol; varying vec3 vB; varying float vHot;
-    void main(){ vec3 N = normalize(vN), V = normalize(vV), L = normalize(vec3(-0.45, 0.62, 0.64));
-      float nl = dot(N, L), diff = smoothstep(-0.7, 1.0, nl) * 0.66 + 0.34, ndv = max(dot(N, V), 0.0), fres = pow(1.0 - ndv, 2.0);
-      float spec = pow(max(dot(N, normalize(L + V)), 0.0), 64.0), spec2 = pow(max(dot(N, normalize(vec3(0.55, -0.4, 0.75) + V)), 0.0), 18.0);
-      vec3 c = vCol * diff * 1.08 + mix(vCol, vec3(1.0), 0.35) * fres * 0.55 + vec3(1.0) * spec * 0.30 + mix(vCol, vec3(1.0), 0.55) * spec2 * 0.10;
-      c = mix(c, vec3(1.0), vHot * 0.38); gl_FragColor = vec4(c, 1.0); }`;   // 22.11: без сетки треугольников — шар гладкий
+  // 24.11 (GREEN 2): вершины — звёзды, а не шары: яркая точка-ядро + мягкое гало + лучики у крупных, мерцание по фазе звезды (aSeed);
+  // сложение света (без глубины): плотные места светлеют, как созвездия. aRad — физический радиус; размер спрайта = диаметр тела × uStar.
+  const STAR_VS = `attribute vec3 aCol; attribute float aRad; attribute float aScale; attribute float aSeed; attribute float aDim;
+    uniform float uScale; uniform float uStar; uniform float uTw; uniform float uTime; uniform float uHover; uniform float uMax; varying vec3 vCol; varying float vSz; varying float vHot; ${GLSL_FADE}
+    void main(){ vCol = aCol; vSz = 0.0; vHot = 0.0; vFade = 0.0;
+      if (aRad * aScale < 0.0005) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }   // погашенная звезда — за кадром
+      vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv;
+      float mag = pow(aSeed, 3.0);   // звёздная величина: много тусклых мелких, мало ярких крупных
+      float hot = abs(float(gl_VertexID) - uHover) < 0.5 ? 1.0 : 0.0, tw = 1.0 - uTw * (0.5 + 0.5 * sin(uTime * (0.9 + 2.6 * aSeed) + aSeed * 61.0));
+      float sz = 2.0 * aRad * aScale * uStar * (0.6 + 1.1 * mag) * uScale / -mv.z * (1.0 + 0.6 * hot); gl_PointSize = clamp(sz, 3.0, uMax);
+      vSz = gl_PointSize; vHot = hot; vFade = fadeOf(-mv.z) * aDim * mix(1.0, tw, 0.85) * (0.5 + 0.7 * mag); }`;
+  const STAR_FS = `varying vec3 vCol; varying float vSz; varying float vHot; varying float vFade; uniform float uGlow; uniform float uGain;
+    void main(){ vec2 p = gl_PointCoord * 2.0 - 1.0; float d = length(p); if (d > 1.0) discard;
+      float core = exp(-d * d * 60.0), halo = exp(-d * d * 8.0) * (1.0 - d * d) * uGlow;
+      float ray = (exp(-abs(p.x) * 26.0 - abs(p.y) * 3.2) + exp(-abs(p.y) * 26.0 - abs(p.x) * 3.2)) * smoothstep(20.0, 52.0, vSz) * uGlow;
+      vec3 hotc = mix(vCol, vec3(1.0), 0.45);
+      vec3 c = vCol * halo * 0.3 + hotc * core * 1.0 + mix(vCol, vec3(1.0), 0.5) * ray * 0.5;
+      c = mix(c, c + vec3(0.35) * (halo + core), vHot); c *= vFade * uGain;
+      gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0)); }`;
 
   /* ---------- стили панели и подписей ---------- */
   const CSS = `.b3d-root{position:relative;overflow:hidden;font-family:"Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;-webkit-tap-highlight-color:transparent}
@@ -193,16 +232,54 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
 .b3d-lab.c i{display:none}
 .b3d-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle;position:relative;top:-1px}
 .b3d-med{position:absolute;left:0;top:0;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;border:2px solid var(--c);background:rgba(7,11,34,.3) center/cover no-repeat;will-change:transform}
-.b3d-panel{position:absolute;left:16px;bottom:16px;width:236px;padding:12px 14px;border-radius:14px;background:rgba(11,16,48,.82);border:1px solid #2b3380;color:#f1efff;font-size:12px;pointer-events:auto;user-select:none}
-.b3d-panel .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px}
-.b3d-panel .row:first-child{margin-top:0}
-.b3d-panel label{color:#aeb0d8}
-.b3d-seg{display:flex;gap:4px}
-.b3d-seg button,.b3d-panel .rst{font:inherit;color:#f1efff;background:#1a2160;border:1px solid #2b3380;border-radius:8px;padding:4px 8px;cursor:pointer}
-.b3d-seg button.on{background:#7c5cff;border-color:#7c5cff;color:#fff}
-.b3d-panel input[type=range]{width:118px;accent-color:#b37bff}
-.b3d-panel .hint{margin-top:9px;color:#7d80b0;font-size:11px;line-height:1.35}
-@media (max-width:560px){.b3d-panel{left:10px;right:10px;bottom:10px;width:auto;padding:9px 11px}.b3d-panel .hint{display:none}.b3d-panel .row{margin-top:6px}.b3d-panel input[type=range]{width:96px}}`;
+/* правый ящик настроек (24.11): режимы · вид · физика · домены; на узком экране — нижний лист, закрыт по умолчанию */
+.b3d-root{--b3d-acc:#b37bff}
+.b3d-dr{position:absolute;top:12px;right:12px;bottom:12px;width:268px;display:flex;flex-direction:column;border-radius:16px;background:rgba(11,13,22,.86);border:1px solid rgba(255,255,255,.11);color:#e7e9f8;font-size:12px;line-height:1.3;pointer-events:auto;user-select:none;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);transition:transform .22s ease,opacity .2s;overflow:hidden}
+.b3d-dr.shut{transform:translateX(calc(100% + 18px));opacity:0;pointer-events:none}
+.b3d-dh{display:flex;align-items:center;justify-content:space-between;padding:11px 12px 9px 15px;border-bottom:1px solid rgba(255,255,255,.08);flex:none}
+.b3d-dh b{font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:650;color:#fff}
+.b3d-ib{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.05);color:#e7e9f8;font:400 15px/1 inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.b3d-ib:hover{background:rgba(255,255,255,.14)}
+.b3d-sc{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:2px 15px 14px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.22) transparent}
+.b3d-sec{margin-top:14px}
+.b3d-sec>h4{margin:0 0 4px;font-size:10px;line-height:1;letter-spacing:.16em;text-transform:uppercase;font-weight:650;color:var(--b3d-acc)}
+.b3d-pr{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.b3d-pr button,.b3d-seg button,.b3d-rst{font:inherit;font-size:12px;color:#e7e9f8;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:9px;padding:6px 8px;cursor:pointer}
+.b3d-pr button:hover,.b3d-seg button:hover,.b3d-rst:hover{background:rgba(255,255,255,.13)}
+.b3d-pr button.on,.b3d-seg button.on{background:color-mix(in srgb,var(--b3d-acc) 30%,transparent);border-color:var(--b3d-acc);color:#fff}
+.b3d-seg{display:flex;gap:5px}
+.b3d-seg button{flex:1}
+.b3d-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px}
+.b3d-row>span{color:#aab0d2}
+.b3d-sl{display:grid;grid-template-columns:1fr auto;align-items:center;row-gap:2px;margin-top:9px}
+.b3d-sl label{color:#aab0d2}
+.b3d-sl output{color:#fff;font-size:11.5px;font-variant-numeric:tabular-nums}
+.b3d-sl input{grid-column:1/3}
+.b3d-dr input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:16px;margin:0;background:transparent;cursor:pointer;touch-action:pan-y}
+.b3d-dr input[type=range]::-webkit-slider-runnable-track{height:3px;border-radius:2px;background:linear-gradient(90deg,var(--b3d-acc) var(--p,50%),rgba(255,255,255,.17) var(--p,50%))}
+.b3d-dr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;margin-top:-5px;border-radius:50%;background:#fff;border:2px solid var(--b3d-acc);box-sizing:border-box}
+.b3d-dr input[type=range]::-moz-range-track{height:3px;border-radius:2px;background:rgba(255,255,255,.17)}
+.b3d-dr input[type=range]::-moz-range-progress{height:3px;border-radius:2px;background:var(--b3d-acc)}
+.b3d-dr input[type=range]::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:#fff;border:2px solid var(--b3d-acc)}
+.b3d-dm{list-style:none;margin:6px 0 0;padding:0}
+.b3d-dm button{display:flex;align-items:center;gap:9px;width:100%;padding:6px 8px;margin:0 0 2px;border:1px solid transparent;border-radius:9px;background:transparent;color:#e7e9f8;font:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+.b3d-dm button:hover{background:rgba(255,255,255,.07)}
+.b3d-dm button.on{background:rgba(255,255,255,.1);border-color:var(--dc)}
+.b3d-dm i{width:9px;height:9px;border-radius:50%;flex:none;background:var(--dc);box-shadow:0 0 8px var(--dc)}
+.b3d-dm span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.b3d-dm small{color:#8d93b8;font-size:11px;font-variant-numeric:tabular-nums}
+.b3d-chk{display:flex;align-items:center;gap:8px;margin-top:10px;color:#aab0d2;cursor:pointer}
+.b3d-chk input{accent-color:var(--b3d-acc);margin:0}
+.b3d-open{position:absolute;top:12px;right:12px;height:32px;padding:0 13px 0 11px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:rgba(11,13,22,.86);color:#e7e9f8;font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px;pointer-events:auto;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.b3d-open:hover{background:rgba(40,44,70,.9)}
+.b3d-open[hidden]{display:none}
+.b3d-hint{position:absolute;left:16px;bottom:12px;max-width:46%;color:#7e85ab;font-size:11px;line-height:1.35;pointer-events:none}
+.b3d-root.nw .b3d-dr{left:8px;right:8px;top:auto;bottom:8px;width:auto;max-height:64%}
+.b3d-root.nw .b3d-dr.shut{transform:translateY(calc(100% + 18px))}
+.b3d-root.nw .b3d-open{top:auto;bottom:10px;right:10px}
+.b3d-root.nw .b3d-hint{display:none}
+.b3d-tip{position:absolute;left:0;top:0;padding:4px 10px 4px 9px;border-radius:8px;background:rgba(11,13,22,.92);border:1px solid rgba(255,255,255,.16);color:#fff;font-size:12px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s;will-change:transform}
+.b3d-tip i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:middle;position:relative;top:-1px}`;
   function injectCss() { if (document.getElementById('b3d-css')) return; const s = document.createElement('style'); s.id = 'b3d-css'; s.textContent = CSS; document.head.appendChild(s); }
 
   /* ---------- mount ---------- */
@@ -293,16 +370,17 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       satList = sats;
     })();
 
-    /* --- play сцена (лениво) --- */
+    /* --- play сцена (лениво): звёзды + рёбра + туманности доменов + дальнее звёздное поле --- */
     const plScene = new THREE.Scene(), plGroup = new THREE.Group(); plScene.add(plGroup);
-    const PL = { built: false, n: 0, pos: null, rad: null, scale: null, edges: null, edgePos: null, mesh: null, lines: null, hover: -1, uni: { uHover: { value: -1 } }, worker: null, simPost: null, fallback: null, params: { strength: 0.4, len: 1, shell: true }, anim: [], anchorsDirty: true, centroid: null, ballCache: {} };
-    const baryAttr = (geo) => { const n = geo.attributes.position.count, b = new Float32Array(3 * n); for (let i = 0; i < n; i++) b[3 * i + (i % 3)] = 1; return new THREE.BufferAttribute(b, 3); };
-    const baseGeo = { 1: null, 2: null };
-    function ballGeometry(detail) {
-      if (baseGeo[detail]) return baseGeo[detail];
-      const ico = new THREE.IcosahedronGeometry(1, detail); const g = new THREE.InstancedBufferGeometry();
-      g.setAttribute('position', ico.attributes.position); g.setAttribute('bary', baryAttr(ico)); return (baseGeo[detail] = g);
-    }
+    const VIEW = { star: 1, glow: 1, tw: 0.45, lk: 1, dist: 1.4, rot: 0.11 };   // «Вид» — рисовалка, применяется мгновенно
+    const ST = {}; SLIDERS.forEach((s) => { ST[s[0]] = s[4]; });
+    const PL = {
+      built: false, n: 0, pos: null, rad: null, scale: null, dim: null, e: null, edgePos: null, pts: null, lines: null, glows: [], field: null, hover: -1, solo: -1, ext: 1, extT: 1, extAt: 0,
+      starU: { uScale: U.uScale, uNear: U.uNear, uRange: U.uRange, uGain: { value: 1 }, uStar: { value: 1.2 }, uTw: { value: 0.45 }, uTime: { value: 0 }, uHover: { value: -1 }, uMax: { value: 72 }, uGlow: { value: 1 } },
+      lineU: { uScale: U.uScale, uNear: U.uNear, uRange: U.uRange, uGain: { value: 0.55 } },
+      worker: null, send: null, fallback: null, params: { link: 0.4, coh: 0.4, len: 1, shell: true, grav: 0.5, visc: 0.14, heat: 0, body: 0.85 },
+      anim: [], anchorsDirty: true, centroid: null, cnt: null, spread: null, hist: null, gg: null,
+    };
 
     function simBackend() {
       // Worker из Blob; если нельзя (CSP, file://) — тот же код в главном потоке
@@ -324,28 +402,49 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
 
     function buildPlay(n) {
       const L = S.play[String(n)]; if (!L) return;
-      if (PL.mesh) { plGroup.remove(PL.mesh, PL.lines); PL.mesh.geometry.dispose(); PL.lines.geometry.dispose(); }
+      if (PL.pts) { plGroup.remove(PL.pts, PL.lines); [PL.pts, PL.lines].forEach((o) => { o.geometry.dispose(); o.material.dispose(); }); }
       const N = L.n, col = S.col;
-      PL.n = N; PL.pos = new Float32Array(L.pos); PL.rad = new Float32Array(L.rad); PL.cl = L.cl; PL.e = L.e; PL.scale = new Float32Array(N).fill(1); PL.alive = new Uint8Array(N).fill(1);
-      const iCol = new Float32Array(3 * N); for (let i = 0; i < N; i++) { const c = col[L.cl[i]]; iCol[3 * i] = c[0]; iCol[3 * i + 1] = c[1]; iCol[3 * i + 2] = c[2]; }
-      const g = new THREE.InstancedBufferGeometry(); const base = ballGeometry(N >= 2000 ? 1 : 2);
-      g.index = base.index; g.setAttribute('position', base.attributes.position); g.setAttribute('bary', base.attributes.bary);
-      PL.aPos = new THREE.InstancedBufferAttribute(PL.pos, 3); PL.aRad = new THREE.InstancedBufferAttribute(PL.rad, 1); PL.aScale = new THREE.InstancedBufferAttribute(PL.scale, 1);
-      PL.aPos.setUsage(THREE.DynamicDrawUsage); PL.aScale.setUsage(THREE.DynamicDrawUsage); PL.aRad.setUsage(THREE.DynamicDrawUsage);
-      g.setAttribute('iPos', PL.aPos); g.setAttribute('iRad', PL.aRad); g.setAttribute('iCol', new THREE.InstancedBufferAttribute(iCol, 3)); g.setAttribute('iScale', PL.aScale);
-      g.instanceCount = N;
-      PL.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({ vertexShader: BALL_VS, fragmentShader: BALL_FS, uniforms: PL.uni }));
-      PL.mesh.frustumCulled = false; plGroup.add(PL.mesh);
-      // рёбра
+      PL.n = N; PL.pos = new Float32Array(L.pos); PL.rad = new Float32Array(L.rad); PL.cl = L.cl; PL.e = L.e;
+      PL.scale = new Float32Array(N).fill(1); PL.alive = new Uint8Array(N).fill(1); PL.dim = new Float32Array(N).fill(1);
+      const iCol = new Float32Array(3 * N), seed = new Float32Array(N);
+      for (let i = 0; i < N; i++) { const c = col[L.cl[i]]; iCol[3 * i] = c[0]; iCol[3 * i + 1] = c[1]; iCol[3 * i + 2] = c[2]; seed[i] = (i * 0.6180339887) % 1; }
+      const g = new THREE.BufferGeometry();
+      PL.aPos = new THREE.BufferAttribute(PL.pos, 3); PL.aRad = new THREE.BufferAttribute(PL.rad, 1); PL.aScale = new THREE.BufferAttribute(PL.scale, 1); PL.aDim = new THREE.BufferAttribute(PL.dim, 1);
+      [PL.aPos, PL.aRad, PL.aScale, PL.aDim].forEach((a) => a.setUsage(THREE.DynamicDrawUsage));
+      g.setAttribute('position', PL.aPos); g.setAttribute('aRad', PL.aRad); g.setAttribute('aScale', PL.aScale); g.setAttribute('aDim', PL.aDim);
+      g.setAttribute('aCol', new THREE.BufferAttribute(iCol, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+      PL.pts = new THREE.Points(g, new THREE.ShaderMaterial({ vertexShader: STAR_VS, fragmentShader: STAR_FS, uniforms: PL.starU, transparent: true, depthTest: false, depthWrite: false, ...BLEND_ADD }));
+      PL.pts.frustumCulled = false; PL.pts.renderOrder = 4; plGroup.add(PL.pts);
+      // рёбра (базовые цвета хранятся: соло домена пересчитывает яркость)
       const m = PL.e.length >> 1; PL.edgePos = new Float32Array(6 * m); const cc = new Float32Array(6 * m);
-      for (let e = 0; e < m; e++) { const a = col[L.cl[PL.e[2 * e]]], b = col[L.cl[PL.e[2 * e + 1]]]; for (let q = 0; q < 3; q++) { cc[6 * e + q] = a[q] * 0.55; cc[6 * e + 3 + q] = b[q] * 0.55; } }
-      const lg = new THREE.BufferGeometry(); PL.aEdge = new THREE.BufferAttribute(PL.edgePos, 3); PL.aEdge.setUsage(THREE.DynamicDrawUsage);
-      lg.setAttribute('position', PL.aEdge); lg.setAttribute('aCol', new THREE.BufferAttribute(cc, 3));
-      PL.lines = new THREE.LineSegments(lg, new THREE.ShaderMaterial({ vertexShader: LINE_VS, fragmentShader: LINE_FS, uniforms: Object.assign({}, U, { uGain: { value: 0.75 } }), transparent: true, depthTest: true, depthWrite: false, ...BLEND_ADD }));
+      for (let e = 0; e < m; e++) { const a = col[L.cl[PL.e[2 * e]]], b = col[L.cl[PL.e[2 * e + 1]]]; for (let q = 0; q < 3; q++) { cc[6 * e + q] = a[q] * 0.6; cc[6 * e + 3 + q] = b[q] * 0.6; } }
+      PL.edgeBase = cc.slice();
+      const lg = new THREE.BufferGeometry(); PL.aEdge = new THREE.BufferAttribute(PL.edgePos, 3); PL.aEdge.setUsage(THREE.DynamicDrawUsage); PL.aEdgeCol = new THREE.BufferAttribute(cc, 3); PL.aEdgeCol.setUsage(THREE.DynamicDrawUsage);
+      lg.setAttribute('position', PL.aEdge); lg.setAttribute('aCol', PL.aEdgeCol);
+      PL.lines = new THREE.LineSegments(lg, new THREE.ShaderMaterial({ vertexShader: LINE_VS, fragmentShader: LINE_FS, uniforms: PL.lineU, transparent: true, depthTest: false, depthWrite: false, ...BLEND_ADD }));
       PL.lines.frustumCulled = false; PL.lines.renderOrder = 2; plGroup.add(PL.lines);
-      syncPlayPositions(true);
-      // оболочечные центры областей
-      PL.anchorsDirty = true; PL.hover = -1; PL.uni.uHover.value = -1; PL.anim.length = 0;
+      // туманности: мягкое цветное пятно за каждым публичным доменом (центр и размер — по облаку звёзд)
+      PL.glows.forEach((o) => { plGroup.remove(o.m); o.m.material.dispose(); }); PL.glows = [];
+      if (!PL.gg) PL.gg = new THREE.PlaneGeometry(2, 2);
+      D.colors.forEach((C, ci) => {
+        if (!C.pub || !C.lab) return; const c = col[ci];
+        const mesh = new THREE.Mesh(PL.gg, new THREE.ShaderMaterial({ vertexShader: GLOW_VS, fragmentShader: GLOW_FS, uniforms: { uCol: { value: new THREE.Vector3(c[0], c[1], c[2]) }, uGain: { value: 0 }, uSize: { value: 0.6 } }, transparent: true, depthTest: false, depthWrite: false, ...BLEND_ADD }));
+        mesh.renderOrder = 0; mesh.frustumCulled = false; plGroup.add(mesh); PL.glows.push({ ci, m: mesh });
+      });
+      // дальнее поле: неподвижные тусклые звёздочки на фоне (глубина и «космос»)
+      if (!PL.field) {
+        const nF = 460, p = new Float32Array(3 * nF), c = new Float32Array(3 * nF), s = new Float32Array(nF); let sd = 7; const rnd = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+        for (let i = 0; i < nF; i++) {
+          const u = rnd() * 2 - 1, ph = rnd() * 6.2832, rr = Math.sqrt(1 - u * u), r = 1.25 + rnd() * 0.9, t = rnd(), b = 0.35 + 0.65 * rnd() * rnd();
+          p[3 * i] = rr * Math.cos(ph) * r; p[3 * i + 1] = u * r; p[3 * i + 2] = rr * Math.sin(ph) * r;
+          c[3 * i] = (0.62 + 0.3 * t) * b; c[3 * i + 1] = (0.7 + 0.2 * t) * b; c[3 * i + 2] = b; s[i] = 0.011 + 0.03 * rnd() * rnd();
+        }
+        const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(p, 3)); fg.setAttribute('aCol', new THREE.BufferAttribute(c, 3)); fg.setAttribute('aSize', new THREE.BufferAttribute(s, 1));
+        PL.field = new THREE.Points(fg, new THREE.ShaderMaterial({ vertexShader: NODE_VS, fragmentShader: NODE_FS, uniforms: { uScale: U.uScale, uNear: U.uNear, uRange: U.uRange, uGain: { value: 0.55 } }, transparent: true, depthTest: false, depthWrite: false, ...BLEND_ADD }));
+        PL.field.frustumCulled = false; PL.field.renderOrder = 0; plScene.add(PL.field);
+      }
+      PL.anchorsDirty = true; PL.hover = -1; PL.starU.uHover.value = -1; PL.anim.length = 0;
+      syncPlayPositions(true); applySolo();
       if (!still) {
         if (!PL.send) simBackend();
         PL.sendInit = () => PL.send({ t: 'init', n: N, pos: PL.pos.slice(), rad: PL.rad.slice(), cl: L.cl.slice(), e: PL.e.slice(), par: PL.params });
@@ -353,10 +452,38 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       }
       PL.built = true;
     }
-    function syncPlayPositions(force) {
-      const P = PL.pos, E = PL.e, ep = PL.edgePos; if (!P) return;
-      for (let e = 0, m = E.length >> 1; e < m; e++) { const a = E[2 * e], b = E[2 * e + 1]; ep[6 * e] = P[3 * a]; ep[6 * e + 1] = P[3 * a + 1]; ep[6 * e + 2] = P[3 * a + 2]; ep[6 * e + 3] = P[3 * b]; ep[6 * e + 4] = P[3 * b + 1]; ep[6 * e + 5] = P[3 * b + 2]; }
-      PL.aPos.needsUpdate = true; PL.aEdge.needsUpdate = true;
+    function syncPlayPositions(first) {
+      const P = PL.pos, E = PL.e, ep = PL.edgePos, A = PL.alive; if (!P) return;
+      for (let e = 0, m = E.length >> 1; e < m; e++) {
+        const a = E[2 * e], b = A[a] && A[E[2 * e + 1]] ? E[2 * e + 1] : a;   // ребро к погашенной звезде схлопывается в точку
+        ep[6 * e] = P[3 * a]; ep[6 * e + 1] = P[3 * a + 1]; ep[6 * e + 2] = P[3 * a + 2]; ep[6 * e + 3] = P[3 * b]; ep[6 * e + 4] = P[3 * b + 1]; ep[6 * e + 5] = P[3 * b + 2];
+      }
+      PL.aPos.needsUpdate = true; PL.aEdge.needsUpdate = true; computeExt(first); placeGlows();
+    }
+    function computeExt(now) {   // размер облака (97-й перцентиль радиуса): камера держит его в кадре при любой физике
+      const t = performance.now(); if (!now && t - PL.extAt < 250) return; PL.extAt = t;
+      const B = PL.hist || (PL.hist = new Uint16Array(120)); B.fill(0); let cnt = 0;
+      for (let i = 0; i < PL.n; i++) { if (!PL.alive[i]) continue; const r = Math.hypot(PL.pos[3 * i], PL.pos[3 * i + 1], PL.pos[3 * i + 2]); B[Math.min(119, (r * 30) | 0)]++; cnt++; }
+      let acc = 0, k = 0; const lim = cnt * 0.97; for (; k < 120; k++) { acc += B[k]; if (acc >= lim) break; }
+      PL.extT = Math.min(3.8, Math.max(0.95, (k + 1) / 30 + 0.1)); if (now) PL.ext = PL.extT;
+    }
+    function placeGlows() {
+      if (!PL.glows.length) return; const cen = playCentroids();
+      for (const o of PL.glows) {
+        const c = o.ci; if (!PL.cnt[c]) { o.m.visible = false; continue; }
+        o.m.visible = true; o.m.position.set(cen[3 * c], cen[3 * c + 1], cen[3 * c + 2]); o.m.material.uniforms.uSize.value = Math.min(1.7, Math.max(0.3, PL.spread[c] * 2.3));
+      }
+      glowGains();
+    }
+    function glowGains() { for (const o of PL.glows) o.m.material.uniforms.uGain.value = 0.075 * VIEW.glow * (PL.solo < 0 || o.ci === PL.solo ? 1 : 0.1); }
+    function applySolo() {   // выбранный домен — ярко, остальные — слабая тень
+      if (!PL.pts) return; const s = PL.solo, cl = PL.cl, E = PL.e, B = PL.edgeBase, C = PL.aEdgeCol.array;
+      for (let i = 0; i < PL.n; i++) PL.dim[i] = s < 0 || cl[i] === s ? 1 : 0.1;
+      for (let e = 0, m = E.length >> 1; e < m; e++) {
+        const a = cl[E[2 * e]] === s, b = cl[E[2 * e + 1]] === s, f = s < 0 ? 1 : a && b ? 1.7 : a || b ? 0.3 : 0.05;
+        for (let q = 0; q < 6; q++) C[6 * e + q] = B[6 * e + q] * f;
+      }
+      PL.aDim.needsUpdate = true; PL.aEdgeCol.needsUpdate = true; glowGains();
     }
 
     /* --- подписи и медальоны --- */
@@ -374,36 +501,42 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       });
     }
     const v3 = new THREE.Vector3(), v4 = new THREE.Vector3();
+    let LABELS_ON = labelsOn;
     function anchorOf(ci) {
       if (mode === 'bg') { const c = S.bg.centers[ci]; return v3.set(c[0], c[1], c[2]); }
-      const cen = playCentroids(); const x = cen[3 * ci], y = cen[3 * ci + 1], z = cen[3 * ci + 2], l = Math.hypot(x, y, z) || 1;
-      return v3.set((x / l) * 1.02, (y / l) * 1.02, (z / l) * 1.02);
+      const cen = playCentroids(); const x = cen[3 * ci], y = cen[3 * ci + 1], z = cen[3 * ci + 2], l = Math.hypot(x, y, z) || 1, rr = Math.min(PL.ext, l + 0.55 * PL.spread[ci]);
+      return v3.set((x / l) * rr, (y / l) * rr, (z / l) * rr);
     }
     function playCentroids() {
       if (!PL.anchorsDirty && PL.centroid) return PL.centroid;
-      const cen = PL.centroid || (PL.centroid = new Float32Array(3 * 12)), cnt = new Float32Array(12); cen.fill(0);
+      const cen = PL.centroid || (PL.centroid = new Float32Array(3 * 12)), cnt = PL.cnt || (PL.cnt = new Float32Array(12)), sp = PL.spread || (PL.spread = new Float32Array(12));
+      cen.fill(0); cnt.fill(0); sp.fill(0);
       for (let i = 0; i < PL.n; i++) { if (!PL.alive[i]) continue; const c = PL.cl[i]; cen[3 * c] += PL.pos[3 * i]; cen[3 * c + 1] += PL.pos[3 * i + 1]; cen[3 * c + 2] += PL.pos[3 * i + 2]; cnt[c]++; }
       for (let c = 0; c < 12; c++) if (cnt[c]) { cen[3 * c] /= cnt[c]; cen[3 * c + 1] /= cnt[c]; cen[3 * c + 2] /= cnt[c]; }
+      for (let i = 0; i < PL.n; i++) { if (!PL.alive[i]) continue; const c = PL.cl[i], dx = PL.pos[3 * i] - cen[3 * c], dy = PL.pos[3 * i + 1] - cen[3 * c + 1], dz = PL.pos[3 * i + 2] - cen[3 * c + 2]; sp[c] += dx * dx + dy * dy + dz * dz; }
+      for (let c = 0; c < 12; c++) if (cnt[c]) sp[c] = Math.sqrt(sp[c] / cnt[c]);
       PL.anchorsDirty = false; return cen;
     }
     function updateLabels() {
       if (!labs.length) return;
+      if (!LABELS_ON) { for (const L of labs) { L.d.style.opacity = 0; L.ln.setAttribute('stroke-opacity', 0); if (L.med) L.med.style.opacity = 0; } return; }
       const grp = mode === 'bg' ? bgGroup : plGroup; grp.updateMatrixWorld(); cam.updateMatrixWorld();
       const compact = W < 560, cx = W / 2 + offX * W, cy = H / 2 + offY * H;
-      const t = Math.tan((cam.fov * Math.PI) / 360), dist = cam.position.z, Rpx = (H / 2) * (1 / (dist * t)) * 0.96;
+      const t = Math.tan((cam.fov * Math.PI) / 360), dist = cam.position.z, R1 = mode === 'play' ? PL.ext : 1, Rpx = (H / 2) * (R1 / (dist * t)) * 0.96;
       const zO = v4.set(0, 0, 0).applyMatrix4(grp.matrixWorld).applyMatrix4(cam.matrixWorldInverse).z;
       const items = [];
       for (const L of labs) {
         const a = anchorOf(L.ci).clone().applyMatrix4(grp.matrixWorld), zv = a.clone().applyMatrix4(cam.matrixWorldInverse).z;
         const nd = a.project(cam), sx = (nd.x * 0.5 + 0.5) * W, sy = (-nd.y * 0.5 + 0.5) * H;
-        const k = Math.min(1, Math.max(0, (zv - zO) / (0.42 * (mode === 'bg' ? S.bg.radii[L.ci] : 1)) + 0.7));   // bg прозрачный: подписи всех цветов, дальние бледнее
+        const k = Math.min(1, Math.max(0, (zv - zO) / (0.42 * (mode === 'bg' ? S.bg.radii[L.ci] : PL.ext)) + 0.7));   // bg прозрачный: подписи всех цветов, дальние бледнее
         const facing = mode === 'bg' ? (L.ci === 0 ? 0.9 : 0.5 + 0.5 * k) : k;
-        L.sx = sx; L.sy = sy; L.f = facing;
-        if (facing > 0.04) items.push(L); else { L.d.style.opacity = 0; L.ln.setAttribute('stroke-opacity', 0); if (L.med) L.med.style.opacity = 0; }
+        L.sx = sx; L.sy = sy; L.f = facing * (L.hl == null ? 1 : L.hl);
+        if (L.f > 0.04) items.push(L); else { L.d.style.opacity = 0; L.ln.setAttribute('stroke-opacity', 0); if (L.med) L.med.style.opacity = 0; }
       }
       for (const L of items) { if (L.compact !== compact) { L.d.classList.toggle('c', compact); L.compact = compact; L.w = 0; } if (!L.w) { L.w = L.d.offsetWidth; L.h = L.d.offsetHeight; } }
+      if (compact && drawerOpen) { for (const L of items) { L.d.style.opacity = 0; if (L.med) L.med.style.opacity = 0; } return; }
       if (compact) {
-        for (const L of items) { L.d.style.transform = `translate(${L.sx - L.w / 2}px,${L.sy - L.h / 2}px)`; L.d.style.opacity = L.f > 0.5 ? 1 : 0; L.ln.setAttribute('stroke-opacity', 0); if (L.med) { L.med.style.transform = `translate(${L.sx}px,${L.sy}px) scale(.78)`; L.med.style.opacity = L.f; } }
+        for (const L of items) { L.d.style.transform = `translate(${L.sx - L.w / 2}px,${L.sy - L.h / 2}px)`; L.d.style.opacity = L.f > 0.5 ? 1 : L.f > 0.15 ? 0.3 : 0; L.ln.setAttribute('stroke-opacity', 0); if (L.med) { L.med.style.transform = `translate(${L.sx}px,${L.sy}px) scale(.78)`; L.med.style.opacity = L.f; } }
         return;
       }
       for (const L of items) {
@@ -427,71 +560,142 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       }
     }
 
-    /* --- панель управления (play) --- */
-    let panel = null;
+    /* --- ящик настроек (play): режимы · домены · вид · физика --- */
+    const SL = {}; SLIDERS.forEach((s) => { SL[s[0]] = s; });
+    let dr = null, openBtn = null, hint = null, drawerOpen = (el.clientWidth || 900) >= 560, presetOn = 'calm';
+    const tip = document.createElement('div'); tip.className = 'b3d-tip'; el.appendChild(tip);
+    const fmtV = (s, v) => (s[5] === 'x' ? (v / 100).toFixed(2) + '×' : s[5] === 'r' ? Math.round(v * 0.573) + '°/s' : v + '%');
     if (controls) {
-      panel = document.createElement('div'); panel.className = 'b3d-panel'; panel.style.display = 'none';
-      panel.innerHTML = `<div class="row"><label>${TX.cnt}</label><div class="b3d-seg">${[500, 1000, 2000].map((v) => `<button data-n="${v}">${v}</button>`).join('')}</div></div>
-<div class="row"><label>${TX.force}</label><input type="range" min="0" max="100" value="40" data-p="strength"></div>
-<div class="row"><label>${TX.link}</label><input type="range" min="40" max="300" value="100" data-p="len"></div>
-<div class="row"><div class="b3d-seg"><button data-m="1" class="on">${TX.shell}</button><button data-m="0">${TX.cloud}</button></div><button class="rst" data-r="1">${TX.reset}</button></div>
-<div class="hint">${TX.hint}</div>`;
-      el.appendChild(panel);
-      panel.addEventListener('click', (e) => {
+      const slHtml = (s) => `<div class="b3d-sl"><label>${TX.s[s[0]]}</label><output data-o="${s[0]}"></output><input type="range" min="${s[2]}" max="${s[3]}" value="${s[4]}" data-k="${s[0]}" aria-label="${TX.s[s[0]]}"></div>`;
+      const doms = D.colors.map((C, ci) => ({ C, ci })).filter((q) => q.C.pub && q.C.lab), cntOf = (C) => (opts.counts && opts.counts[C.k] != null ? opts.counts[C.k] : C.n);
+      dr = document.createElement('aside'); dr.className = 'b3d-dr' + (drawerOpen ? '' : ' shut'); dr.style.display = 'none';
+      dr.innerHTML = `<div class="b3d-dh"><b>${TX.title}</b><button class="b3d-ib" data-x="1" type="button" aria-label="×">×</button></div><div class="b3d-sc">
+<div class="b3d-sec"><h4>${TX.modes}</h4><div class="b3d-pr">${Object.keys(PRESETS).map((k) => `<button type="button" data-pr="${k}">${TX.p[k]}</button>`).join('')}</div></div>
+<div class="b3d-sec"><h4>${TX.doms}</h4><ul class="b3d-dm"><li><button type="button" data-d="-1" style="--dc:#fff"><i></i><span>${TX.all}</span><small>${doms.reduce((a, q) => a + (+cntOf(q.C) || 0), 0)}</small></button></li>${doms.map(({ C, ci }) => `<li><button type="button" data-d="${ci}" style="--dc:${C.hex}"><i></i><span>${C.lab[lang] || C.lab.ru}</span><small>${cntOf(C)}</small></button></li>`).join('')}</ul></div>
+<div class="b3d-sec"><h4>${TX.view}</h4>${SLIDERS.filter((s) => s[1] === 'view').map(slHtml).join('')}<label class="b3d-chk"><input type="checkbox" data-l="1" checked>${TX.labels}</label></div>
+<div class="b3d-sec"><h4>${TX.phys}</h4><div class="b3d-seg" style="margin-top:8px"><button type="button" data-m="1">${TX.shell}</button><button type="button" data-m="0">${TX.cloud}</button></div>${SLIDERS.filter((s) => s[1] === 'phys').map(slHtml).join('')}</div>
+<div class="b3d-sec"><h4>${TX.cnt}</h4><div class="b3d-seg" style="margin-top:8px">${[500, 1000, 2000].map((v) => `<button type="button" data-n="${v}">${v}</button>`).join('')}</div><button type="button" class="b3d-rst" data-r="1" style="width:100%;margin-top:12px">${TX.reset}</button></div></div>`;
+      el.appendChild(dr);
+      openBtn = document.createElement('button'); openBtn.type = 'button'; openBtn.className = 'b3d-open'; openBtn.hidden = true;
+      openBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 3.5h12M1 10.5h12"/><circle cx="4.5" cy="3.5" r="1.8" fill="#0b0d16"/><circle cx="9.5" cy="10.5" r="1.8" fill="#0b0d16"/></svg><span>${TX.title}</span>`;
+      el.appendChild(openBtn);
+      hint = document.createElement('div'); hint.className = 'b3d-hint'; hint.textContent = TX.hint; hint.style.display = 'none'; el.appendChild(hint);
+      openBtn.addEventListener('click', () => setDrawer(true));
+      dr.addEventListener('click', (e) => {
         const b = e.target.closest('button'); if (!b) return;
-        if (b.dataset.n) setCount(+b.dataset.n);
-        else if (b.dataset.m != null) { PL.params.shell = b.dataset.m === '1'; panel.querySelectorAll('[data-m]').forEach((x) => x.classList.toggle('on', x === b)); sendParams(); }
-        else if (b.dataset.r) { buildPlay(count); need(); }
+        if (b.dataset.x) setDrawer(false);
+        else if (b.dataset.pr) applyPreset(b.dataset.pr);
+        else if (b.dataset.d != null) { const ci = +b.dataset.d; setSolo(ci < 0 || ci === PL.solo ? -1 : ci); }
+        else if (b.dataset.n) setCount(+b.dataset.n);
+        else if (b.dataset.m != null) { PL.params.shell = b.dataset.m === '1'; presetOn = ''; sendParams(); syncPanel(); }
+        else if (b.dataset.r) resetAll();
       });
-      panel.addEventListener('input', (e) => {
-        const p = e.target.dataset.p; if (!p) return;
-        if (p === 'strength') PL.params.strength = e.target.value / 100; else PL.params.len = e.target.value / 100;
-        sendParams();
-      });
-      ['pointerdown', 'wheel'].forEach((ev) => panel.addEventListener(ev, (e) => e.stopPropagation()));
+      dr.addEventListener('input', (e) => { const k = e.target.dataset.k; if (k) { presetOn = ''; setSlider(k, e.target.value); syncPanel(); } });
+      dr.addEventListener('change', (e) => { if (e.target.dataset.l) { LABELS_ON = e.target.checked; need(); } });
+      ['pointerdown', 'wheel'].forEach((ev) => dr.addEventListener(ev, (e) => e.stopPropagation()));
+    }
+    function syncSlider(k) {
+      if (!dr) return; const s = SL[k], v = ST[k], inp = dr.querySelector(`input[data-k="${k}"]`), out = dr.querySelector(`output[data-o="${k}"]`);
+      if (inp) { inp.value = v; inp.style.setProperty('--p', ((v - s[2]) / (s[3] - s[2])) * 100 + '%'); } if (out) out.textContent = fmtV(s, v);
+    }
+    function applyView(k) {
+      PL.starU.uStar.value = VIEW.star * 1.2; PL.starU.uGlow.value = VIEW.glow; PL.starU.uTw.value = VIEW.tw; PL.lineU.uGain.value = 0.55 * VIEW.lk; glowGains();
+      if (k === 'dist') { if (still) { placeCam(); draw(); } else placeCam(); } need();
+    }
+    function setSlider(k, v, quiet) {
+      const s = SL[k]; if (!s) return; v = Math.min(s[3], Math.max(s[2], +v)); ST[k] = v;
+      if (s[1] === 'view') { VIEW[k] = v / 100; applyView(k); } else { PL.params[k] = v / 100; if (!quiet) sendParams(); }
+      syncSlider(k);
+    }
+    function applyPreset(name) {
+      const P = PRESETS[name]; if (!P) return; presetOn = name;
+      for (const k of Object.keys(P)) if (k !== 'shell') setSlider(k, P[k], true);
+      PL.params.shell = !!P.shell; sendParams(); syncPanel(); need();
+    }
+    function setSolo(ci) {
+      PL.solo = ci == null ? -1 : ci; applySolo();
+      labs.forEach((L) => { L.hl = PL.solo < 0 || L.ci === PL.solo ? 1 : 0.2; });
+      syncPanel(); need(); if (still) draw();
+    }
+    function setDrawer(on) { drawerOpen = !!on; syncPanel(); if (still) { easeCam(true); draw(); } else need(); }
+    function resetAll() {
+      SLIDERS.forEach((s) => setSlider(s[0], s[4], true)); PL.params.shell = true; presetOn = 'calm'; LABELS_ON = labelsOn; PL.solo = -1;
+      labs.forEach((L) => { L.hl = 1; }); buildPlay(count); syncPanel(); need();
     }
     function sendParams() { if (PL.send && !still) PL.send({ t: 'params', par: PL.params }); }
-    function syncPanel() { if (!panel) return; panel.style.display = mode === 'play' ? '' : 'none'; panel.querySelectorAll('[data-n]').forEach((b) => b.classList.toggle('on', +b.dataset.n === count)); }
+    function syncPanel() {
+      if (!dr) return; const on = mode === 'play';
+      dr.style.display = on ? '' : 'none'; dr.classList.toggle('shut', !drawerOpen); openBtn.hidden = !on || drawerOpen; hint.style.display = on ? '' : 'none';
+      dr.querySelectorAll('[data-n]').forEach((b) => b.classList.toggle('on', +b.dataset.n === count));
+      dr.querySelectorAll('[data-pr]').forEach((b) => b.classList.toggle('on', b.dataset.pr === presetOn));
+      dr.querySelectorAll('[data-m]').forEach((b) => b.classList.toggle('on', (b.dataset.m === '1') === PL.params.shell));
+      dr.querySelectorAll('[data-d]').forEach((b) => b.classList.toggle('on', +b.dataset.d === PL.solo));
+      const lc = dr.querySelector('[data-l]'); if (lc) lc.checked = LABELS_ON;
+    }
 
     /* --- кадр --- */
-    let raf = 0, needs = true, vis = true, docVis = !document.hidden, destroyed = false, lastT = 0, frames = 0, adaptN = 0, adaptSum = 0;
-    const offX = opts.offset ? opts.offset.x || 0 : 0, offY = opts.offset ? opts.offset.y || 0 : 0;
-    const ROT = { bg: 0.07, play: 0.11 };   // рад/с
+    let raf = 0, needs = true, vis = true, docVis = !document.hidden, destroyed = false, lastT = 0, frames = 0, adaptN = 0, adaptSum = 0, ptMax = 64;
+    try { const gl = ren.getContext(), pr = gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE); if (pr && pr[1] > 8) ptMax = pr[1]; } catch (_) {}
+    const baseX = opts.offset ? opts.offset.x || 0 : 0, baseY = opts.offset ? opts.offset.y || 0 : 0; let offX = baseX, offY = baseY;
+    const pad = { x: 0, y: 0 };   // сколько пикселей кадра занято ящиком: облако смещается в свободную часть
+    const ROT = { bg: 0.07 };   // рад/с
     const A0 = { bg: 0.6, play: 0.3 }, TILT = { bg: 0.2, play: 0.28 };
     const AY = new THREE.Vector3(0, 1, 0), AX = new THREE.Vector3(1, 0, 0), qa = new THREE.Quaternion(), qb = new THREE.Quaternion();
     let angleBg = A0.bg, spin = { x: 0, y: 0 }, lastUser = -1e9, fixedT = null;
     const setPlayAngle = (a) => plGroup.quaternion.setFromEuler(new THREE.Euler(TILT.play, a, 0));
     bgGroup.rotation.x = TILT.bg; setPlayAngle(A0.play);
     const continuous = () => !still && !reduce && vis && docVis;
+    function padTarget() {
+      if (!dr || mode !== 'play' || !drawerOpen) return [0, 0];
+      return W < 560 ? [0, Math.min(dr.offsetHeight || H * 0.5, H * 0.64) + 12] : [(dr.offsetWidth || 268) + 24, 0];
+    }
+    function placeCam() {
+      const t = Math.tan((cam.fov * Math.PI) / 360), asp = W / H; let z;
+      if (mode === 'bg') { z = (W < 560 ? 1.1 : 1.2) / Math.min(t, t * asp); offX = baseX; offY = baseY; }
+      else {
+        const kk = Math.min(Math.max(H - pad.y, 80) / H, (asp * Math.max(W - pad.x, 80)) / W);
+        z = (VIEW.dist * PL.ext) / (t * kk); offX = baseX - pad.x / 2 / W; offY = baseY - pad.y / 2 / H;
+      }
+      cam.position.set(0, 0, z); cam.near = 0.1; cam.far = z * 3.6 + 30; cam.setViewOffset(W, H, -offX * W, -offY * H, W, H);
+      cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+      U.uNear.value = mode === 'bg' ? z - 1.2 : z - PL.ext * 1.1; U.uRange.value = mode === 'bg' ? 2.4 : PL.ext * 2.4;
+      if (PL.field) PL.field.scale.setScalar(z);
+    }
+    function easeCam(snap) {   // плавно: смещение под ящик и размер облака; true — ещё движется
+      const p = padTarget(), dx = p[0] - pad.x, dy = p[1] - pad.y, de = PL.extT - PL.ext; let ch = false, moving = false;
+      if (dx || dy) { ch = true; if (!snap && (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5)) { pad.x += dx * 0.22; pad.y += dy * 0.22; moving = true; } else { pad.x = p[0]; pad.y = p[1]; } }
+      if (de) { ch = true; if (!snap && Math.abs(de) > 0.004) { PL.ext += de * 0.1; moving = true; } else PL.ext = PL.extT; }
+      if (ch) placeCam(); return moving;
+    }
     function fit() {
       W = Math.max(el.clientWidth, 1); H = Math.max(el.clientHeight, 1);
-      ren.setPixelRatio(dprCap); ren.setSize(W, H, false);
-      cam.aspect = W / H; const t = Math.tan((cam.fov * Math.PI) / 360), m = mode === 'bg' ? (W < 560 ? 1.1 : 1.2) : 1.16;
-      cam.position.set(0, 0, m / Math.min(t, t * cam.aspect));
-      cam.near = 0.1; cam.far = 30; cam.setViewOffset(W, H, -offX * W, -offY * H, W, H);
-      cam.updateProjectionMatrix(); cam.updateMatrixWorld();
-      U.uScale.value = (H * dprCap) / (2 * t); U.uNear.value = cam.position.z - 1.2; U.uRange.value = 2.4;
-      U.uGain.value = dprCap >= 1.75 ? 1.25 : 1;
+      ren.setPixelRatio(dprCap); ren.setSize(W, H, false); el.classList.toggle('nw', W < 560);
+      cam.aspect = W / H; const t = Math.tan((cam.fov * Math.PI) / 360);
+      U.uScale.value = (H * dprCap) / (2 * t); U.uGain.value = dprCap >= 1.75 ? 1.25 : 1; PL.starU.uMax.value = Math.min(ptMax, 80 * dprCap);
+      const p = padTarget(); pad.x = p[0]; pad.y = p[1]; placeCam();
       labs.forEach((L) => { L.w = 0; });
       needs = true;
     }
     function draw() {
       if (mode === 'bg') { bgGroup.rotation.y = angleBg; orbits.rotation.set(0.12, -angleBg * 0.45, 0); placeSats(angleBg); }
+      else PL.starU.uTime.value = fixedT != null ? fixedT / 1000 : performance.now() / 1000;
       ren.render(mode === 'bg' ? bgScene : plScene, cam);
       updateLabels(); frames++;
     }
     function tick(now) {
       raf = 0; if (destroyed) return;
       const cont = continuous();
-      if (cont && !needs && now - lastT < 30) { raf = requestAnimationFrame(tick); return; }   // автовращение ≤ 30 fps
+      if (cont && !needs && now - lastT < 30) { raf = requestAnimationFrame(tick); return; }   // автовращение и мерцание ≤ 30 fps
       const dt = Math.min(now - lastT, 100), user = now - lastUser < 2500;
       let anim = false;
+      if (mode === 'play' && easeCam(!cont)) anim = true;
       if (cont) {
         if (mode === 'bg') { angleBg += (dt / 1000) * ROT.bg; anim = true; }
         else {
-          if (!user) { plGroup.quaternion.premultiply(qa.setFromAxisAngle(AY, (dt / 1000) * ROT.play)); anim = true; }
+          if (!user && VIEW.rot > 0) { plGroup.quaternion.premultiply(qa.setFromAxisAngle(AY, (dt / 1000) * VIEW.rot)); anim = true; }
           if (Math.abs(spin.x) + Math.abs(spin.y) > 0.0002) { plGroup.quaternion.premultiply(qa.setFromAxisAngle(AY, spin.y)).premultiply(qb.setFromAxisAngle(AX, spin.x)); spin.x *= 0.93; spin.y *= 0.93; anim = true; }
           if (PL.anim.length) { stepAnims(now); anim = true; }
+          if (VIEW.tw > 0) anim = true;   // мерцание звёзд
         }
       }
       if (opts.adaptive !== false && anim && dt > 20 && lastT) {   // медленный кадр (< 22 fps в среднем) → ниже DPR
@@ -504,17 +708,22 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
     function need() { needs = true; if (!raf && !destroyed && vis && docVis && !still) raf = requestAnimationFrame(tick); }
 
     /* --- взаимодействие play --- */
-    const ray = new THREE.Raycaster(), inv = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
-    function pick(cx, cy) {
+    const ray = new THREE.Raycaster(), inv = new THREE.Matrix4(), m4 = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
+    function pick(cx, cy) {   // ближайшая к курсору звезда в экранных пикселях (радиус захвата ≥ 9 px — звёзды мелкие)
       if (!PL.built) return { i: -1 };
-      const r = dom.getBoundingClientRect(); ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), cam);
-      plGroup.updateMatrixWorld(); inv.copy(plGroup.matrixWorld).invert(); o3.copy(ray.ray.origin).applyMatrix4(inv); d3.copy(ray.ray.direction).transformDirection(inv);
-      let best = -1, bt = 1e9;
+      const r = dom.getBoundingClientRect(), px = cx - r.left, py = cy - r.top;
+      plGroup.updateMatrixWorld(); m4.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse).multiply(plGroup.matrixWorld); const e = m4.elements;
+      const sc = (U.uScale.value / dprCap) * VIEW.star * 1.2 * 1.1; let best = -1, bs = 1e9;
       for (let i = 0; i < PL.n; i++) {
-        if (!PL.alive[i]) continue; const ox = o3.x - PL.pos[3 * i], oy = o3.y - PL.pos[3 * i + 1], oz = o3.z - PL.pos[3 * i + 2], rr = PL.rad[i] * PL.scale[i];
-        const b = ox * d3.x + oy * d3.y + oz * d3.z, c = ox * ox + oy * oy + oz * oz - rr * rr, disc = b * b - c; if (disc < 0) continue;
-        const t = -b - Math.sqrt(disc); if (t > 0 && t < bt) { bt = t; best = i; }
+        if (!PL.alive[i] || (PL.solo >= 0 && PL.cl[i] !== PL.solo)) continue;
+        const x = PL.pos[3 * i], y = PL.pos[3 * i + 1], z = PL.pos[3 * i + 2], w = e[3] * x + e[7] * y + e[11] * z + e[15]; if (w <= 0) continue;
+        const sx = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / w * 0.5 + 0.5) * r.width, sy = (-(e[1] * x + e[5] * y + e[9] * z + e[13]) / w * 0.5 + 0.5) * r.height;
+        const rr = Math.max(9, (PL.rad[i] * PL.scale[i] * sc) / w), dx = sx - px, dy = sy - py, d2 = dx * dx + dy * dy; if (d2 > rr * rr) continue;
+        const s = d2 / (rr * rr) + w * 0.01; if (s < bs) { bs = s; best = i; }
       }
+      if (best < 0) return { i: -1 };
+      ray.setFromCamera(new THREE.Vector2((px / r.width) * 2 - 1, -(py / r.height) * 2 + 1), cam);
+      inv.copy(plGroup.matrixWorld).invert(); o3.copy(ray.ray.origin).applyMatrix4(inv); d3.copy(ray.ray.direction).transformDirection(inv);
       return { i: best, dir: [d3.x, d3.y, d3.z] };
     }
     function stepAnims(now) {
@@ -527,8 +736,14 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       }
       if (any) PL.aScale.needsUpdate = true;
     }
+    function setTip(h, e) {
+      if (h < 0) { tip.style.opacity = 0; return; }
+      const C = D.colors[PL.cl[h]]; if (!C || !C.pub || !C.lab) { tip.style.opacity = 0; return; }
+      if (tip.dataset.c !== String(PL.cl[h])) { tip.dataset.c = PL.cl[h]; tip.innerHTML = `<i style="background:${C.hex};box-shadow:0 0 8px ${C.hex}"></i>${C.lab[lang] || C.lab.ru}`; }
+      const r = el.getBoundingClientRect(); tip.style.transform = `translate(${Math.max(6, Math.min(e.clientX - r.left + 14, W - tip.offsetWidth - 8))}px,${Math.max(6, e.clientY - r.top - 34)}px)`; tip.style.opacity = 1;
+    }
     let drag = null, lastClick = { i: -1, t: 0 }, hoverTimer = 0;
-    dom.addEventListener('pointerdown', (e) => { if (mode !== 'play') return; drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId }; spin.x = spin.y = 0; try { dom.setPointerCapture(e.pointerId); } catch (_) {} dom.style.cursor = 'grabbing'; });
+    dom.addEventListener('pointerdown', (e) => { if (mode !== 'play') return; drag = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false, id: e.pointerId }; spin.x = spin.y = 0; setTip(-1); try { dom.setPointerCapture(e.pointerId); } catch (_) {} dom.style.cursor = 'grabbing'; });
     dom.addEventListener('pointermove', (e) => {
       if (mode !== 'play') return;
       if (drag) {
@@ -538,24 +753,28 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
           const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), dy * 0.0065), qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), dx * 0.0065);
           plGroup.quaternion.premultiply(qy).premultiply(qx); spin.x = dy * 0.0065; spin.y = dx * 0.0065; lastUser = performance.now(); need();
         }
-      } else if (!hoverTimer) hoverTimer = setTimeout(() => { hoverTimer = 0; const h = pick(e.clientX, e.clientY).i; if (h !== PL.hover) { PL.hover = h; PL.uni.uHover.value = h; dom.style.cursor = h >= 0 ? 'pointer' : 'grab'; need(); } }, 24);
+      } else {
+        if (PL.hover >= 0) setTip(PL.hover, e);
+        if (!hoverTimer) hoverTimer = setTimeout(() => { hoverTimer = 0; const h = pick(e.clientX, e.clientY).i; setTip(h, e); if (h !== PL.hover) { PL.hover = h; PL.starU.uHover.value = h; dom.style.cursor = h >= 0 ? 'pointer' : 'grab'; need(); } }, 24);
+      }
     });
     dom.addEventListener('pointerup', (e) => {
       if (mode !== 'play' || !drag) return; const d = drag; drag = null; dom.style.cursor = 'grab'; try { dom.releasePointerCapture(d.id); } catch (_) {}
       lastUser = performance.now(); if (d.moved) { if (reduce) { spin.x = spin.y = 0; } return; }
       const p = pick(e.clientX, e.clientY); if (p.i < 0) return; const now = performance.now(), second = lastClick.i === p.i && now - lastClick.t < 380; lastClick = { i: p.i, t: now };
       const cluster = D.colors[PL.cl[p.i]].k;
-      if (second) { PL.alive[p.i] = 0; if (reduce || still) { PL.scale[p.i] = 0; PL.rad[p.i] = 0; PL.aScale.needsUpdate = PL.aRad.needsUpdate = true; } else PL.anim.push({ i: p.i, t0: now, dur: 280, pop: true }); if (PL.send) PL.send({ t: 'pop', i: p.i }); emit('select', { cluster, index: p.i, action: 'pop' }); emit('pop', { cluster, index: p.i }); }
+      if (second) { PL.alive[p.i] = 0; if (reduce || still) { PL.scale[p.i] = 0; PL.rad[p.i] = 0; PL.aScale.needsUpdate = PL.aRad.needsUpdate = true; } else PL.anim.push({ i: p.i, t0: now, dur: 280, pop: true }); if (PL.send) PL.send({ t: 'pop', i: p.i }); setTip(-1); emit('select', { cluster, index: p.i, action: 'pop' }); emit('pop', { cluster, index: p.i }); }
       else { if (!reduce && !still) PL.anim.push({ i: p.i, t0: now, dur: 420, pop: false }); if (PL.send) PL.send({ t: 'kick', i: p.i, dir: p.dir }); emit('select', { cluster, index: p.i, action: 'push' }); }
       need();
     });
-    dom.addEventListener('pointerleave', () => { if (PL.hover !== -1) { PL.hover = -1; PL.uni.uHover.value = -1; need(); } });
+    dom.addEventListener('pointerleave', () => { setTip(-1); if (PL.hover !== -1) { PL.hover = -1; PL.starU.uHover.value = -1; need(); } });
     dom.addEventListener('lostpointercapture', () => { drag = null; });
 
     /* --- переключения --- */
     function applyMode(m) {
       mode = m; if (m === 'play' && !PL.built) buildPlay(count);
       dom.style.pointerEvents = m === 'play' ? 'auto' : 'none'; dom.style.cursor = m === 'play' ? 'grab' : ''; dom.style.touchAction = m === 'play' ? 'none' : '';
+      if (m !== 'play') setTip(-1);
       syncPanel(); fit(); emit('mode', m);
     }
     function setMode(m) {
@@ -570,7 +789,7 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
       emit('count', n);
     }
     function renderAt(ms) {
-      fixedT = ms || 0; angleBg = A0.bg + (fixedT / 1000) * ROT.bg; setPlayAngle(A0.play + (fixedT / 1000) * ROT.play);
+      fixedT = ms || 0; angleBg = A0.bg + (fixedT / 1000) * ROT.bg; setPlayAngle(A0.play + (fixedT / 1000) * VIEW.rot);
       if (mode === 'play' && !PL.built) buildPlay(count);
       draw();
     }
@@ -580,20 +799,23 @@ window.BRAIN3D_LITE_DATA={"v":1,"colors":[{"k":"VIOLET","hex":"#b37bff","n":104,
     document.addEventListener('visibilitychange', onVis);
     const ro = global.ResizeObserver ? new ResizeObserver(() => { fit(); if (still) draw(); else need(); }) : null; if (ro) ro.observe(el); else global.addEventListener('resize', fit);
 
+    SLIDERS.forEach((s) => syncSlider(s[0]));
+    applyView();
     applyMode(mode);
-    if (opts.time != null) { fixedT = +opts.time; angleBg = A0.bg + (fixedT / 1000) * ROT.bg; setPlayAngle(A0.play + (fixedT / 1000) * ROT.play); }
+    if (opts.time != null) { fixedT = +opts.time; angleBg = A0.bg + (fixedT / 1000) * ROT.bg; setPlayAngle(A0.play + (fixedT / 1000) * VIEW.rot); }
     if (still) draw(); else { lastT = performance.now(); need(); }
     setTimeout(() => emit('ready', { mode, count }), 0);
 
     return {
       setActive(on) { vis = !!on; if (vis) { lastT = performance.now(); need(); } },   // страница вне экрана (iframe) ставит на паузу
       setMode, setCount, renderAt, on(ev, fn) { (listeners[ev] = listeners[ev] || []).push(fn); return this; },
-      stats() { return { mode, count, frames, labels: labs.map((L) => [D.colors[L.ci].k, +(L.f || 0).toFixed(2), Math.round(L.sx || 0), Math.round(L.sy || 0), +L.d.style.opacity]), calls: ren.info.render.calls, triangles: ren.info.render.triangles, dpr: dprCap, worker: !!PL.worker, fallback: !!PL.fallback, gl: (() => { try { const g = ren.getContext(), x = g.getExtension('WEBGL_debug_renderer_info'); return x ? g.getParameter(x.UNMASKED_RENDERER_WEBGL) : 'n/a'; } catch (_) { return 'n/a'; } })() }; },
+      set: setSlider, preset: applyPreset, solo: setSolo, drawer: setDrawer,   // управление снаружи (QA, хуки страницы)
+      stats() { return { mode, count, frames, solo: PL.solo, ext: +PL.ext.toFixed(2), sliders: Object.assign({}, ST), labels: labs.map((L) => [D.colors[L.ci].k, +(L.f || 0).toFixed(2), Math.round(L.sx || 0), Math.round(L.sy || 0), +L.d.style.opacity]), calls: ren.info.render.calls, triangles: ren.info.render.triangles, dpr: dprCap, worker: !!PL.worker, fallback: !!PL.fallback, gl: (() => { try { const g = ren.getContext(), x = g.getExtension('WEBGL_debug_renderer_info'); return x ? g.getParameter(x.UNMASKED_RENDERER_WEBGL) : 'n/a'; } catch (_) { return 'n/a'; } })() }; },
       destroy() {
-        destroyed = true; cancelAnimationFrame(raf); if (io) io.disconnect(); if (ro) ro.disconnect(); else global.removeEventListener('resize', fit); document.removeEventListener('visibilitychange', onVis);
+        destroyed = true; cancelAnimationFrame(raf); clearTimeout(hoverTimer); if (io) io.disconnect(); if (ro) ro.disconnect(); else global.removeEventListener('resize', fit); document.removeEventListener('visibilitychange', onVis);
         if (PL.worker) { PL.worker.postMessage({ t: 'stop' }); PL.worker.terminate(); } if (PL.fallback) PL.fallback({ t: 'stop' });
         [bgScene, plScene].forEach((s) => s.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); }));
-        ren.dispose(); ren.forceContextLoss && ren.forceContextLoss(); el.classList.remove('b3d-root'); [dom, ov, panel].forEach((n) => n && n.remove());
+        ren.dispose(); ren.forceContextLoss && ren.forceContextLoss(); el.classList.remove('b3d-root', 'nw'); [dom, ov, dr, openBtn, hint, tip].forEach((n) => n && n.remove());
       },
     };
   }
