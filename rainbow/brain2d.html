@@ -57,7 +57,7 @@ html.embed.locked #mode{display:none}
   .hint{display:none}
   #card{top:auto;bottom:58px;left:12px;right:12px;width:auto;max-height:46%}
 }
-</style><style>#mode{display:none!important}html.embed,html.embed body{background:#0d0f12!important;color-scheme:dark}</style></head><body>
+</style><style>#mode{display:none!important}html.embed,html.embed body{background:#0d0f12!important;color-scheme:dark}.find,#card{display:none!important}</style></head><body>
 <canvas id="cosmos"></canvas><canvas id="g2"></canvas><canvas id="g2l"></canvas><canvas id="g3" hidden></canvas>
 <header class="top">
   <div class="brand"><b data-t="title"></b><span id="stat"></span></div>
@@ -404,7 +404,7 @@ window.COSMOS = (() => {
       const [top, bot] = on.pad ? on.pad() : [60, 60], free = Math.max(120, g.h - top - bot);
       const k = Math.min((g.w - 24) / (x1 - x0 + 24), free / (y1 - y0 + 24));
       const mx = (x0 + x1) / 2, my = (y0 + y1) / 2 - (top + free / 2 - g.h / 2) / k;
-      g.x += (mx - g.x) * a; g.y += (my - g.y) * a; g.k += (k - g.k) * a; g.dirty = true;
+      g.x += (mx - g.x) * a; g.y += (my - g.y) * a; g.k += (k * 1.18 - g.k) * a; g.dirty = true;
     }
 
     function draw() {
@@ -757,15 +757,15 @@ window.COSMOS = (() => {
   const T = {
     ru: {title: 'Мозг NANO', stat: '{n} нот · {e} связей · 7 цветов', q: 'поиск ноты', found: 'найдено: {n}', none: 'ничего', links: 'Связи · {n}',
       priv: 'закрытая нота', more: '… ещё {n}',
-      hint2: 'колесо или щипок — масштаб · тянуть фон — сдвиг · тянуть ноту — двигать · клик — карточка · двойной клик — весь мозг · названия нот скрыты',
+      hint2: 'колесо или щипок — масштаб · тянуть фон — сдвиг · тянуть ноту — двигать · двойной клик — весь мозг · названия нот скрыты',
       hint3: 'тянуть — вращать · тап по шару — карточка · 600 самых связанных нот, матовые шары · NANO в центре'},
     zh: {title: 'NANO 大脑', stat: '{n} 条笔记 · {e} 条连接 · 7 种颜色', q: '搜索笔记', found: '找到 {n} 条', none: '无结果', links: '连接 · {n}',
       priv: '笔记已隐藏', more: '… 还有 {n} 条',
-      hint2: '滚轮或双指——缩放 · 拖动背景——平移 · 拖动笔记——移动 · 点击——卡片 · 双击——全图 · 笔记标题已隐藏',
+      hint2: '滚轮或双指——缩放 · 拖动背景——平移 · 拖动笔记——移动 · 双击——全图 · 笔记标题已隐藏',
       hint3: '拖动——旋转 · 点击球——卡片 · 连接最多的 600 条笔记，哑光球体 · 中心是 NANO'},
     en: {title: 'NANO brain', stat: '{n} notes · {e} links · 7 colours', q: 'search notes', found: '{n} found', none: 'nothing', links: 'Links · {n}',
       priv: 'hidden note', more: '… {n} more',
-      hint2: 'wheel or pinch — zoom · drag background — pan · drag a note — move it · click — card · double-click — whole brain · note titles are hidden',
+      hint2: 'wheel or pinch — zoom · drag background — pan · drag a note — move it · double-click — whole brain · note titles are hidden',
       hint3: 'drag — rotate · tap a ball — card · the 600 most linked notes, matte balls · NANO in the centre'},
   };
   const LI = {ru: 0, zh: 1, en: 2};
